@@ -1,12 +1,10 @@
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
-import { useSupabaseClient, useUser } from '#imports'
 
 const supabase = useSupabaseClient()
-const user = useUser()
+const user = useSupabaseUser()
 
 const avatarUrl = ref('')
-const displayName = ref('')
+const displayName = ref('Jesse')
 const email = ref('')
 const newPassword = ref('')
 
@@ -49,7 +47,9 @@ async function uploadAvatar(event: Event) {
 
   const { error: updateError } = await supabase
     .from('profiles')
+    //@ts-ignore
     .update({ avatar_url: avatarUrl.value })
+    //@ts-ignore
     .eq('id', user.value?.id)
 
   if (updateError) {
@@ -58,61 +58,41 @@ async function uploadAvatar(event: Event) {
 }
 
 async function updateProfile() {
-  if (!user.value) return
 
-  const updates = {
-    id: user.value.id,
-    display_name: displayName.value,
-    updated_at: new Date(),
-  }
-
-  const { error: profileError } = await supabase.from('profiles').upsert(updates)
-
-  if (profileError) {
-    console.error('Error updating profile:', profileError)
-  }
-
-  if (email.value !== user.value.email) {
-    const { error: emailError } = await supabase.auth.updateUser({ email: email.value })
-    if (emailError) {
-      console.error('Error updating email:', emailError)
-    }
-  }
-
-  if (newPassword.value) {
-    const { error: passwordError } = await supabase.auth.updateUser({ password: newPassword.value })
-    if (passwordError) {
-      console.error('Error updating password:', passwordError)
-    }
-  }
-
-  // Reset password field after update
-  newPassword.value = ''
 }
 </script>
 <template>
-  <div class="container mx-auto p-4">
-    <h1 class="text-2xl font-bold mb-6">Account Profile</h1>
-
-    <div class="mb-6">
-      <UAvatar :src="avatarUrl" />
-      <UButton @click="$refs.avatarInput.click()" color="primary">Change Avatar</UButton>
-      <input type="file" @change="uploadAvatar" accept="image/*" hidden="true">
-    </div>
-
-    <form @submit.prevent="updateProfile" class="space-y-4">
-      <UFormGroup label="Display Name">
-        <UInput v-model="displayName" />
-      </UFormGroup>
-
-      <UFormGroup label="Email">
-        <UInput v-model="email" type="email" />
-      </UFormGroup>
-
-      <UFormGroup label="New Password">
-        <UInput v-model="newPassword" type="password" />
-      </UFormGroup>
-      <UButton type="submit" color="primary">Update Profile</UButton>
-    </form>
-  </div>
+  <UContainer class="space-y-8">
+    <UCard :ui="{ body: { padding: 'p-0 sm:p-0' } }">
+      <template #header>
+        <div class="flex flex-row gap-1 items-center">
+          <UIcon name="i-heroicons-user" class="w-8 h-8" />
+          <h1 class="font-bold text-xl">Account</h1>
+        </div>
+      </template>
+      <div class="grid grid-cols-1 md:grid-cols-2 divide-x divide-gray-200">
+        <div class="p-4 flex flex-col justify-center items-center w-full h-full gap-2">
+          <UAvatar :src="avatarUrl" :alt="displayName" class="w-32 h-32" />
+          <UButton label="Upload Avatar" @click="uploadAvatar" />
+        </div>
+        <div>
+          <ul class="divide-y divide-gray-200">
+            <li class="grid grid-cols-2 justify-between align-center px-4 py-5 sm:p-6">
+              <div class="font-semibold">Display Name</div>
+              <div class="justify-self-end">{{ displayName }}</div>
+            </li>
+            <li class="grid grid-cols-2 justify-between align-center px-4 py-5 sm:p-6">
+              <div class="font-semibold">Email</div>
+              <div class="justify-self-end">{{ email }}</div>
+            </li>
+          </ul>
+        </div>
+      </div>
+      <template #footer>
+        <div class="flex justify-end">
+          <UButton color="primary">Update Profile</UButton>
+        </div>
+      </template>
+    </UCard>
+  </UContainer>
 </template>

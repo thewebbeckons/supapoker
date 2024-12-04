@@ -1,13 +1,12 @@
 <template>
-  <div>
+  <UContainer v-if="user" class="min-h-full grid place-items-center">
+    <UButton v-if="user" to="/rooms">Go to Rooms</UButton>
+  </UContainer>
+  <UContainer v-else>
     <h1>Hello, Supapoker!</h1>
-
-    <!-- This will be a nice landing page with a form to create a new room -->
-  </div>
+  </UContainer>
 </template>
 
 <script lang="ts" setup>
-
+const user = useSupabaseUser()
 </script>
-
-<style></style>

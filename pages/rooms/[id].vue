@@ -1,32 +1,3 @@
-<template>
-  <div>
-    <h1>Room {{ $route.params.id }}</h1>
-    <div>
-      <aside>
-        <p v-if="voting">Time Elapsed: {{ elapsedTime }}</p>
-        <h3>Participants</h3>
-        <ul>
-          <li v-for="i in 10" :key="i">
-            <span>Player {{ i }}</span>
-          </li>
-        </ul>
-      </aside>
-      <main>
-        <h3>Game</h3>
-        <!-- grid of playing cards-->
-        <div class="grid grid-cols-4 gap-2 justify-between align-center">
-          <UCard v-for="card in cardOptions" :key="card">
-            <UButton class="flex flex-col items-center" @click="selectCard(card)" :disabled="!voting"
-              :class="{ 'bg-green-500': card === selectedCard }">
-              <span>{{ card }}</span>
-            </UButton>
-          </UCard>
-        </div>
-      </main>
-    </div>
-  </div>
-</template>
-
 <script lang="ts" setup>
 const route = useRoute()
 const roomId = route.params.id as string
@@ -68,25 +39,26 @@ const startTimer = () => {
   }, 1000)
 }
 
-const selectCard = async (cardValue: number) => {
-  try {
-    const { data, error } = await supabase
-      .from('votes')
-      .upsert({
-        room_id: roomId,
-        story_id: currentStory.value,
-        player_id: currentPlayerId.value,
-        vote_value: cardValue
-      }, {
-        onConflict: 'room_id,story_id,player_id'
-      })
+const selectCard = async (cardValue: string) => {
+  alert(cardValue)
+  // try {
+  //   const { data, error } = await supabase
+  //     .from('votes')
+  //     .upsert({
+  //       room_id: roomId,
+  //       story_id: currentStory.value,
+  //       player_id: currentPlayerId.value,
+  //       vote_value: cardValue
+  //     }, {
+  //       onConflict: 'room_id,story_id,player_id'
+  //     })
 
-    if (error) throw error
-    selectedCard.value = cardValue
-    console.log('Vote recorded successfully:', data)
-  } catch (error) {
-    console.error('Error recording vote:', error)
-  }
+  //   if (error) throw error
+  //   selectedCard.value = cardValue
+  //   console.log('Vote recorded successfully:', data)
+  // } catch (error) {
+  //   console.error('Error recording vote:', error)
+  // }
 }
 
 const stopTimer = () => {
@@ -117,4 +89,47 @@ onUnmounted(() => {
 */
 </script>
 
-<style></style>
+<template>
+  <UContainer class="space-y-8">
+    <div class="flex flex-row gap-3 justify-between items-center">
+      <h1 class="font-bold text-xl">Room: {{ $route.params.id }}</h1>
+      <UButton @click="startGame" label="Start Game" />
+    </div>
+    <div class="flex flex-row gap-6 sm:gap-12 justify-between">
+      <main>
+        <!-- grid of playing cards-->
+        <div class="grid grid-cols-4 gap-6 justify-between align-center">
+          <UCard v-for="card in cardOptions" :key="card" :ui="{ body: { padding: 'p-8 sm:p-12' } }"
+            class="grid place-content-center text-2xl cursor-pointer" @click="selectCard(card)">
+            <!-- <UButton class="flex flex-col items-center" @click="selectCard(card)" :disabled="!voting"
+              :class="{ 'bg-green-500': card === selectedCard }">
+              <span>{{ card }}</span>
+            </UButton> -->
+            {{ card }}
+          </UCard>
+        </div>
+      </main>
+      <aside>
+        <UCard :ui="{ body: { padding: 'p-0 sm:p-0' } }">
+          <template #header>
+            <h3 class="text-xl font-semibold">Participants</h3>
+          </template>
+          <p v-if="voting">Time Elapsed: {{ elapsedTime }}</p>
+          <ul class="divide-y divide-gray-200">
+            <li v-for="i in 10" :key="i" class="grid grid-cols-2 gap-6 px-4 py-6">
+              <div class="flex flex-row gap-2 items-center justify-start">
+                <UChip position="top-left" inset>
+                  <UAvatar icon="i-heroicons-photo" :alt="'Player' + i" />
+                </UChip>
+                <span>Player {{ i }}</span>
+              </div>
+              <div class="flex flex-row items-center justify-end">
+                <span class="px-3 py-2 bg-blue-100 rounded">8</span>
+              </div>
+            </li>
+          </ul>
+        </UCard>
+      </aside>
+    </div>
+  </UContainer>
+</template>
