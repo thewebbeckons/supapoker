@@ -14,11 +14,11 @@
             @click="logout" />
         </div>
       </div>
-      <div v-else class="flex flex-row justify-between">
+      <div v-else class="flex flex-row justify-between items-center">
         <NuxtLink to="/">
           <h1 class="font-bold text-2xl">SupaPoker</h1>
-          <UButton v-if="$route.path != '/login'" :ui="{ rounded: 'rounded-full' }" label="Login" to="/login" />
         </NuxtLink>
+        <UButton v-if="$route.path != '/login'" :ui="{ rounded: 'rounded-full' }" label="Login" to="/login" />
       </div>
     </div>
   </UContainer>
