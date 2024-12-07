@@ -41,18 +41,20 @@ const handleLogin = async () => {
 }
 </script>
 <template>
-  <div class="flex items-center justify-center py-12">
-    <UCard class="w-full max-w-md">
-      <template #header>
-        <h1 class="text-2xl font-bold">Welcome Back!</h1>
-        <p>Let's get magical!</p>
-      </template>
-      <form @submit.prevent="handleLogin" class="space-y-4">
-        <UFormGroup label="Email">
-          <UInput v-model="email" type="email" placeholder="Enter your email" required />
-        </UFormGroup>
-        <UButton type="submit" color="blue" block :loading="loading">Login</UButton>
-      </form>
-    </UCard>
-  </div>
+  <UContainer>
+    <div class="flex items-center justify-center py-12">
+      <UCard class="w-full max-w-md">
+        <template #header>
+          <h1 class="text-2xl font-bold">Welcome Back!</h1>
+          <p>Let's get magical!</p>
+        </template>
+        <form @submit.prevent="handleLogin" class="space-y-4">
+          <UFormGroup label="Email">
+            <UInput v-model="email" type="email" placeholder="Enter your email" required />
+          </UFormGroup>
+          <UButton type="submit" color="blue" block :loading="loading">Login</UButton>
+        </form>
+      </UCard>
+    </div>
+  </UContainer>
 </template>
