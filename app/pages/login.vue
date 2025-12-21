@@ -51,13 +51,13 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
             description: 'You have been logged in!',
             color: 'success'
         })
-        await navigateTo('/')
+        await navigateTo('/rooms')
     }
 }
 
 watchEffect(() => {
     if (user.value) {
-        navigateTo('/')
+        navigateTo('/rooms')
     }
 })
 </script>
