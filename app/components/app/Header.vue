@@ -14,12 +14,14 @@ const items = [
         to: '/rooms'
     },
 ]
+
+
 </script>
 
 <template>
     <UHeader>
         <template #title>
-            <NuxtLink :to="user ? '/rooms' : '/'">SupaPoker</NuxtLink>
+            <NuxtLink to="/">SupaPoker</NuxtLink>
             <UBadge color="info" variant="subtle">Beta</UBadge>
         </template>
         <UNavigationMenu v-if="user" :items="items" />

@@ -12,7 +12,6 @@
   "dependencies": {
     "@nuxt/ui": "^4.3.0",
     "@nuxtjs/supabase": "^2.0.3",
-    "@vercel/analytics": "^1.6.1",
     "@vueuse/nuxt": "^14.1.0",
     "nuxt": "^4.2.2",
     "vue": "latest",
@@ -20,6 +19,7 @@
     "zod": "^4.2.1"
   },
   "devDependencies": {
-    "@iconify-json/lucide": "^1.2.82"
+    "@iconify-json/lucide": "^1.2.82",
+    "@nuxt/hints": "^1.0.0-alpha.4"
   }
 }

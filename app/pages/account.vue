@@ -3,8 +3,6 @@ import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import type { Database } from '~/types/database.types'
 
-
-
 const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
 const toast = useToast()
@@ -48,6 +46,7 @@ async function onProfileSubmit(payload: FormSubmitEvent<ProfileSchema>) {
 
         const updates = {
             name: payload.data.name,
+            avatar: avatarUrl.value,
             updated_at: new Date().toISOString(),
         }
 
@@ -80,39 +79,24 @@ async function onProfileSubmit(payload: FormSubmitEvent<ProfileSchema>) {
     }
 }
 
-// --- Password Section ---
-import { passwordSchema } from '~/utils/schemas'
 
-const changePasswordSchema = z.object({
-    password: passwordSchema,
-    confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-})
+async function onAvatarUpdate(url: string | null) {
+    avatarUrl.value = url
 
-type PasswordSchema = z.output<typeof changePasswordSchema>
+    if (!user.value || !url) return
 
-const passwordState = reactive<PasswordSchema>({
-    password: '',
-    confirmPassword: ''
-})
-
-const { passwordStrength, strengthScore, strengthColor } = usePasswordStrength(toRef(passwordState, 'password'))
-
-async function onPasswordSubmit(payload: FormSubmitEvent<PasswordSchema>) {
     try {
-        const { error } = await supabase.auth.updateUser({
-            password: payload.data.password
-        })
+        const { error } = await supabase
+            .from('profile')
+            .update({
+                avatar: url,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('user_id', user.value.sub)
 
         if (error) throw error
-
-        toast.add({ title: 'Success', description: 'Password updated!', color: 'success' })
-        passwordState.password = ''
-        passwordState.confirmPassword = ''
     } catch (error: any) {
-        toast.add({ title: 'Error', description: error.message, color: 'error' })
+        toast.add({ title: 'Error saving avatar', description: error.message, color: 'error' })
     }
 }
 </script>
@@ -146,7 +130,8 @@ async function onPasswordSubmit(payload: FormSubmitEvent<PasswordSchema>) {
                 <!-- Avatar Row -->
                 <UFormField name="avatar" label="Avatar" description="JPG, GIF or PNG. 1MB Max." required
                     class="flex max-sm:flex-col justify-between sm:items-center gap-4">
-                    <AccountAvatarUpload v-model="avatarUrl" :name="profileState.name" />
+                    <AccountAvatarUpload :model-value="avatarUrl" @update:model-value="onAvatarUpdate"
+                        :name="profileState.name" />
                 </UFormField>
                 <div class="flex justify-end pt-4">
                     <UButton type="submit" label="Save changes" color="neutral" variant="solid" />
@@ -174,38 +159,6 @@ async function onPasswordSubmit(payload: FormSubmitEvent<PasswordSchema>) {
         </UCard>
 
         <!-- Password Section -->
-        <UCard>
-            <template #header>
-                <h2 class="text-xl font-semibold">Security</h2>
-                <p class="text-sm text-neutral-500">Update your password</p>
-            </template>
-
-            <UForm :schema="changePasswordSchema" :state="passwordState" class="space-y-4" @submit="onPasswordSubmit">
-                <UFormField label="New Password" name="password">
-                    <UInput v-model="passwordState.password" type="password" icon="i-lucide-lock" />
-
-                    <div v-if="passwordState.password"
-                        class="mt-4 p-4 border border-neutral-200 dark:border-neutral-800 rounded-lg bg-neutral-50 dark:bg-neutral-900/50 space-y-3">
-                        <p class="text-sm font-medium text-neutral-900 dark:text-white">Password Strength</p>
-                        <UProgress :model-value="strengthScore" :max="5" :color="strengthColor" size="xs" />
-                        <div class="grid grid-cols-2 gap-1 text-xs">
-                            <div v-for="(req, index) in passwordStrength" :key="index" class="flex items-center gap-1"
-                                :class="req.met ? 'text-green-500' : 'text-neutral-500'">
-                                <UIcon :name="req.met ? 'i-lucide-check' : 'i-lucide-circle'" class="w-3 h-3" />
-                                <span>{{ req.label }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </UFormField>
-
-                <UFormField label="Confirm Password" name="confirmPassword">
-                    <UInput v-model="passwordState.confirmPassword" type="password" icon="i-lucide-lock" />
-                </UFormField>
-
-                <div class="flex justify-end">
-                    <UButton type="submit" label="Update Password" color="neutral" variant="soft" />
-                </div>
-            </UForm>
-        </UCard>
+        <AccountPasswordChange />
     </div>
 </template>
