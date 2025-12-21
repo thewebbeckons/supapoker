@@ -18,7 +18,7 @@ const items = [
 
 <template>
     <UHeader title="SupaPoker" :to="user ? '/rooms' : '/'">
-        <UNavigationMenu :items="items" />
+        <UNavigationMenu v-if="user" :items="items" />
         <template #right>
             <div v-if="!user" class="flex items-center gap-2">
                 <UButton label="Login" to="/login" variant="outline" color="neutral" />

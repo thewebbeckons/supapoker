@@ -25,27 +25,7 @@ const state = reactive<Schema>({
     password: ''
 })
 
-const passwordStrength = computed(() => {
-    const pwd = state.password
-    return [
-        { label: 'Min. 8 chars', met: pwd.length >= 8 },
-        { label: 'Uppercase', met: /[A-Z]/.test(pwd) },
-        { label: 'Lowercase', met: /[a-z]/.test(pwd) },
-        { label: 'Number', met: /[0-9]/.test(pwd) },
-        { label: 'Special char', met: /[^A-Za-z0-9]/.test(pwd) }
-    ]
-})
-
-const strengthScore = computed(() => {
-    return passwordStrength.value.filter(req => req.met).length
-})
-
-const strengthColor = computed(() => {
-    const score = strengthScore.value
-    if (score <= 2) return 'error'
-    if (score <= 4) return 'warning'
-    return 'success'
-})
+const { passwordStrength, strengthScore, strengthColor } = usePasswordStrength(toRef(state, 'password'))
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
     const { data, error } = await supabase.auth.signUp({
@@ -103,17 +83,17 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
         </div>
 
         <UForm :schema="schema" :state="state" class="flex flex-col gap-4" @submit="onSubmit">
-            <UFormGroup label="Name" name="name" required>
+            <UFormField label="Name" name="name" required>
                 <UInput v-model="state.name" size="lg" placeholder="Enter your name" icon="i-lucide-user"
                     class="w-full" />
-            </UFormGroup>
+            </UFormField>
 
-            <UFormGroup label="Email" name="email" required>
+            <UFormField label="Email" name="email" required>
                 <UInput v-model="state.email" size="lg" type="email" placeholder="Enter your email" icon="i-lucide-mail"
                     class="w-full" />
-            </UFormGroup>
+            </UFormField>
 
-            <UFormGroup label="Password" name="password" required>
+            <UFormField label="Password" name="password" required>
                 <UInput v-model="state.password" size="lg" type="password" placeholder="Enter your password"
                     icon="i-lucide-lock" class="w-full" />
 
@@ -129,13 +109,13 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
                         </div>
                     </div>
                 </div>
-            </UFormGroup>
+            </UFormField>
 
             <UButton type="submit" block label="Sign Up" color="primary" />
         </UForm>
 
         <div class="text-center text-sm text-neutral-400">
-            Already have an account? <NuxtLink to="/login" class="text-white hover:underline">Login</NuxtLink>
+            Already have an account? <NuxtLink to="/login" class="text-primary hover:underline">Login</NuxtLink>
         </div>
     </div>
 </template>
