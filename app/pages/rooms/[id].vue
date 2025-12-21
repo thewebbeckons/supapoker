@@ -38,32 +38,87 @@ const channel = client.channel(`room:${roomId}`, {
     },
 })
 
-onMounted(() => {
+// Fetch current user profile
+const { data: userProfile } = await useAsyncData('user-profile', async () => {
+    if (!user.value) return null
+    const { data } = await client
+        .from('profile')
+        .select('name, avatar')
+        .eq('user_id', user.value.id)
+        .single()
+    return data
+})
+
+const onlineUsers = ref<Set<string>>(new Set())
+
+async function fetchParticipants() {
+    const { data: participants } = await client
+        .from('room_participants')
+        .select('user_id')
+        .eq('room_id', roomId)
+
+    if (participants && participants.length > 0) {
+        const userIds = participants.map((p: any) => p.user_id)
+
+        const { data: profiles } = await client
+            .from('profile')
+            .select('user_id, name, avatar')
+            .in('user_id', userIds)
+
+        const profileMap = new Map()
+        if (profiles) {
+            profiles.forEach((p: any) => profileMap.set(p.user_id, p))
+        }
+
+        players.value = userIds.map((uid: string) => {
+            const profile = profileMap.get(uid)
+            return {
+                id: uid,
+                name: profile?.name || 'Anonymous',
+                avatar: profile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${uid}`,
+                status: onlineUsers.value.has(uid) ? 'waiting' : 'offline',
+                time: '00:00:00',
+                vote: null,
+                isModerator: room.value && uid === room.value.created_by,
+                isOnline: onlineUsers.value.has(uid)
+            }
+        })
+    } else {
+        players.value = []
+    }
+}
+
+onMounted(async () => {
+    // 1. Mark as participant
+    if (user.value) {
+        await client
+            .from('room_participants')
+            .upsert({
+                room_id: roomId,
+                user_id: user.value.id,
+                joined_at: new Date().toISOString()
+            }, { onConflict: 'room_id,user_id' }) // Just update joined_at if exists
+    }
+
+    // 2. Setup Realtime
     channel
         .on('presence', { event: 'sync' }, () => {
             const newState = channel.presenceState()
-            const users = Object.values(newState).flat() as any[]
-
-            players.value = users.map(p => ({
-                id: p.user_id,
-                name: p.name || 'Anonymous',
-                avatar: p.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id}`,
-                status: 'waiting', // Default status for now
-                time: '00:00:00', // Default time
-                vote: null,       // Default vote
-                isModerator: room.value && p.user_id === room.value.created_by
-            }))
+            const onlineIds = Object.keys(newState)
+            onlineUsers.value = new Set(onlineIds)
+            fetchParticipants() // Refresh list to update online status
         })
         .subscribe(async (status) => {
             if (status === 'SUBSCRIBED') {
                 await channel.track({
                     user_id: user.value?.id,
-                    name: user.value?.user_metadata?.full_name || user.value?.user_metadata?.name || 'Anonymous',
-                    avatar: user.value?.user_metadata?.avatar_url,
                     online_at: new Date().toISOString(),
                 })
             }
         })
+
+    // Initial fetch
+    await fetchParticipants()
 })
 
 onUnmounted(() => {
