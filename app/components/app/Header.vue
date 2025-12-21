@@ -17,7 +17,11 @@ const items = [
 </script>
 
 <template>
-    <UHeader title="SupaPoker" :to="user ? '/rooms' : '/'">
+    <UHeader>
+        <template #title>
+            <NuxtLink :to="user ? '/rooms' : '/'" class="text-xl font-bold">SupaPoker</NuxtLink>
+            <UBadge color="info" variant="subtle">Beta</UBadge>
+        </template>
         <UNavigationMenu v-if="user" :items="items" />
         <template #right>
             <div v-if="!user" class="flex items-center gap-2">
