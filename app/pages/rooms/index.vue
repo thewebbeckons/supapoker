@@ -47,6 +47,8 @@ const { data: rooms, refresh, status } = await useAsyncData('rooms', async () =>
         role: room.created_by === userId ? 'creator' : 'participant',
         lastUsed: room.updated_at
     })) as Room[]
+}, {
+    watch: [user]
 })
 
 // Filter rooms based on search
