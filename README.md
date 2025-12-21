@@ -1,10 +1,39 @@
-# Nuxt 3 Minimal Starter
+# Supapoker
 
-Look at the [Nuxt 3 documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+A real-time Planning Poker application built with Nuxt 4, Supabase, and Nuxt UI.
+
+## Features
+
+- **User Authentication**: Secure sign-up and login via Supabase Auth.
+- **Room Management**: Create and join rooms for planning sessions.
+- **Real-time Interaction**: (In Progress) Vote on stories and see results in real-time.
+- **Modern UI**: Clean and responsive data-driven interface using Nuxt UI.
+- **Dark Mode**: Fully supported out of the box.
+
+## Tech Stack
+
+- [Nuxt 4](https://nuxt.com)
+- [Supabase](https://supabase.com)
+- [Nuxt UI](https://ui.nuxt.com)
+- [VueUse](https://vueuse.org)
 
 ## Setup
 
-Make sure to install the dependencies:
+### Prerequisites
+
+- Node.js (Latest LTS recommended)
+- A Supabase project
+
+### Environment Variables
+
+Create a `.env` file in the root directory:
+
+```bash
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_KEY=your_supabase_anon_key
+```
+
+### Installation
 
 ```bash
 # npm
@@ -20,7 +49,7 @@ yarn install
 bun install
 ```
 
-## Development Server
+## Development
 
 Start the development server on `http://localhost:3000`:
 
@@ -55,21 +84,3 @@ yarn build
 # bun
 bun run build
 ```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm run preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
