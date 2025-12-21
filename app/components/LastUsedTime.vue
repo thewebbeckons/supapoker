@@ -9,5 +9,7 @@ const timeAgo = useTimeAgo(props.time)
 </script>
 
 <template>
-    <span>{{ timeAgo }}</span>
+    <ClientOnly>
+        <span>{{ timeAgo }}</span>
+    </ClientOnly>
 </template>

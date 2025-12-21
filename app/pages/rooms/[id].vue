@@ -148,44 +148,14 @@ function copyRoomUrl() {
 }
 
 const isEditModalOpen = ref(false)
-const editName = ref('')
-const editDescription = ref('')
-const isUpdating = ref(false)
+const isDeleteModalOpen = ref(false)
 
 const canEdit = computed(() => {
     return user.value && room.value && user.value.sub === room.value.created_by
 })
 
 function openEditModal() {
-    if (!room.value) return
-    editName.value = room.value.name
-    editDescription.value = room.value.description || ''
     isEditModalOpen.value = true
-}
-
-async function updateRoom() {
-    if (!editName.value.trim() || !room.value) return
-
-    isUpdating.value = true
-    const { error: updateError } = await client
-        .from('rooms')
-        .update({
-            name: editName.value,
-            description: editDescription.value,
-            updated_at: new Date().toISOString()
-        })
-        .eq('id', roomId)
-
-    isUpdating.value = false
-
-    if (updateError) {
-        toast.add({ title: 'Error', description: updateError.message, color: 'error' })
-        return
-    }
-
-    toast.add({ title: 'Success', description: 'Room updated successfully', color: 'success' })
-    await refresh()
-    isEditModalOpen.value = false
 }
 
 function selectCard(cardValue: number) {
@@ -219,8 +189,12 @@ function selectCard(cardValue: number) {
                     <!-- Room Actions/Edit -->
                     <div class="flex items-center self-center gap-2">
                         <UTooltip text="Edit Room Details">
-                            <UButton v-if="canEdit" icon="i-lucide-pencil" color="neutral" variant="ghost" size="xs"
+                            <UButton v-if="canEdit" icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm"
                                 @click="openEditModal" />
+                        </UTooltip>
+                        <UTooltip text="Delete Room">
+                            <UButton v-if="canEdit" icon="i-lucide-trash-2" color="error" variant="ghost" size="sm"
+                                @click="isDeleteModalOpen = true" />
                         </UTooltip>
                     </div>
                 </div>
@@ -291,7 +265,7 @@ function selectCard(cardValue: number) {
                         <div v-for="story in STORIES" :key="story.title"
                             class="flex items-center px-6 py-3 bg-primary-50/50 dark:bg-primary-900/10 border-l-4 border-primary-500">
                             <span class="text-sm font-medium text-neutral-700 dark:text-neutral-200">{{ story.title
-                                }}</span>
+                            }}</span>
                         </div>
                     </div>
                 </div>
@@ -351,27 +325,10 @@ function selectCard(cardValue: number) {
             </div>
         </div>
 
-        <!-- Edit Room Modal (Preserved functionality) -->
-        <UModal v-model:open="isEditModalOpen" title="Edit Room" description="Update room details."
-            :ui="{ content: 'sm:max-w-xl' }">
-            <template #body>
-                <div class="flex flex-col gap-4">
-                    <UFormField label="Room Name" required>
-                        <UInput v-model="editName" placeholder="Room name" @keydown.enter="updateRoom" class="w-full"
-                            autofocus />
-                    </UFormField>
+        <!-- Edit Room Modal -->
+        <RoomEditModal v-model="isEditModalOpen" :room="room" @success="refresh" />
 
-                    <UFormField label="Description">
-                        <UTextarea v-model="editDescription" placeholder="Description..." :rows="3" class="w-full" />
-                    </UFormField>
-
-                    <div class="flex justify-end gap-2">
-                        <UButton label="Cancel" color="neutral" variant="ghost" @click="isEditModalOpen = false" />
-                        <UButton label="Save Changes" color="primary" @click="updateRoom" :disabled="!editName.trim()"
-                            :loading="isUpdating" />
-                    </div>
-                </div>
-            </template>
-        </UModal>
+        <!-- Delete Room Modal -->
+        <RoomDeleteModal v-model="isDeleteModalOpen" :room="room" />
     </div>
 </template>
