@@ -27,19 +27,48 @@ const CARDS = [
     { label: '☕', value: -2, icon: 'i-lucide-coffee' }
 ]
 
-const PLAYERS = [
-    { id: 1, name: 'Jamie', avatar: 'https://i.pravatar.cc/150?u=1', status: 'voted', time: '00:00:13', vote: 3, isModerator: false },
-    { id: 2, name: 'Jesse', avatar: 'https://i.pravatar.cc/150?u=2', status: 'voted', time: '00:00:13', vote: 3, isModerator: false },
-    { id: 3, name: 'Sal', avatar: 'https://i.pravatar.cc/150?u=3', status: 'voted', time: '00:00:15', vote: 3, isModerator: false },
-    { id: 4, name: 'Adam', avatar: 'https://i.pravatar.cc/150?u=4', status: 'voted', time: '00:00:10', vote: 3, isModerator: false },
-    { id: 5, name: 'Bob Cooper 👀', avatar: 'https://i.pravatar.cc/150?u=5', status: 'voted', time: '00:00:13', vote: 5, isModerator: false },
-    { id: 6, name: 'Ett Dinardo', avatar: 'https://i.pravatar.cc/150?u=6', status: 'voted', time: '00:00:15', vote: 5, isModerator: false },
-    { id: 7, name: 'Kailong He', avatar: 'https://i.pravatar.cc/150?u=7', status: 'voted', time: '00:00:10', vote: 3, isModerator: true },
-    { id: 8, name: 'Shweta', avatar: 'https://i.pravatar.cc/150?u=8', status: 'voted', time: '00:00:14', vote: 3, isModerator: false },
-    { id: 9, name: 'Shawn', avatar: 'https://i.pravatar.cc/150?u=9', status: 'waiting', time: '00:00:00', vote: null, isModerator: false },
-    { id: 10, name: 'Nidhi', avatar: 'https://i.pravatar.cc/150?u=10', status: 'waiting', time: '00:00:00', vote: null, isModerator: false },
-    { id: 11, name: '', avatar: 'https://i.pravatar.cc/150?u=11', status: 'waiting', time: '00:00:00', vote: null, isModerator: false }
-]
+const players = ref<any[]>([])
+
+// Realtime Presence Logic
+const channel = client.channel(`room:${roomId}`, {
+    config: {
+        presence: {
+            key: user.value?.id,
+        },
+    },
+})
+
+onMounted(() => {
+    channel
+        .on('presence', { event: 'sync' }, () => {
+            const newState = channel.presenceState()
+            const users = Object.values(newState).flat() as any[]
+
+            players.value = users.map(p => ({
+                id: p.user_id,
+                name: p.name || 'Anonymous',
+                avatar: p.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${p.user_id}`,
+                status: 'waiting', // Default status for now
+                time: '00:00:00', // Default time
+                vote: null,       // Default vote
+                isModerator: room.value && p.user_id === room.value.created_by
+            }))
+        })
+        .subscribe(async (status) => {
+            if (status === 'SUBSCRIBED') {
+                await channel.track({
+                    user_id: user.value?.id,
+                    name: user.value?.user_metadata?.full_name || user.value?.user_metadata?.name || 'Anonymous',
+                    avatar: user.value?.user_metadata?.avatar_url,
+                    online_at: new Date().toISOString(),
+                })
+            }
+        })
+})
+
+onUnmounted(() => {
+    channel.unsubscribe()
+})
 
 const STORIES = [
     { title: '5372', status: 'Active' }
@@ -122,7 +151,7 @@ function selectCard(cardValue: number) {
         </UButton>
     </div>
 
-    <div v-else class="min-h-screen bg-neutral-50/50 dark:bg-neutral-950">
+    <div v-else class="min-h-screen">
         <div class="grid grid-cols-1 lg:grid-cols-4 overflow-hidden gap-6 p-6">
             <!-- Main Content Area -->
             <div
@@ -150,7 +179,7 @@ function selectCard(cardValue: number) {
                     <!-- Cards Grid -->
                     <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-w-4xl mx-auto">
                         <button v-for="card in CARDS" :key="card.value" @click="selectCard(card.value)"
-                            class="relative group flex flex-col items-center justify-center w-24 h-36 rounded-xl border-2 transition-all duration-200 bg-white dark:bg-neutral-800 shadow-sm hover:-translate-y-1 hover:shadow-md"
+                            class="relative group flex flex-col items-center justify-center w-24 h-36 rounded-xl border-2 transition-all duration-200 bg-white dark:bg-neutral-800 shadow-sm hover:-translate-y-1 hover:shadow-md cursor-pointer"
                             :class="[
                                 selectedCard === card.value
                                     ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
@@ -166,6 +195,7 @@ function selectCard(cardValue: number) {
                             <!-- Corner values -->
                             <span class="absolute top-2 left-2 text-xs font-medium text-neutral-400">
                                 <template v-if="!card.icon">{{ card.label }}</template>
+                                <UIcon v-else :name="card.icon" class="w-3 h-3" />
                             </span>
                             <span
                                 class="absolute bottom-2 right-2 text-xs font-medium text-neutral-400 transform rotate-180">
@@ -231,7 +261,7 @@ function selectCard(cardValue: number) {
 
                 <!-- Player List -->
                 <div class="flex-1 overflow-y-auto">
-                    <div v-for="player in PLAYERS" :key="player.id"
+                    <div v-for="player in players" :key="player.id"
                         class="flex items-center justify-between p-4 border-b border-neutral-50 dark:border-neutral-800/50 hover:bg-neutral-50 dark:hover:bg-neutral-800/30 transition-colors">
                         <div class="flex items-center gap-3">
                             <div class="relative">
