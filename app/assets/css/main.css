@@ -1,0 +1,10 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+@theme {
+  --font-sans: 'JetBrains Mono', monospace;  
+}
+
+:root {
+  --ui-radius: 0;
+}

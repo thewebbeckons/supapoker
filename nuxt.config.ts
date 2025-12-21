@@ -1,25 +1,20 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
-  compatibilityDate: "2024-04-03",
+  compatibilityDate: "2025-12-01",
   devtools: {
-    enabled: true,
-
-    timeline: {
-      enabled: true,
-    },
+    enabled: true,    
   },
   modules: [
     "@nuxt/ui",
-    "@nuxt/fonts",
     "@vueuse/nuxt",
     "@nuxtjs/supabase",
-    "@nuxthub/core",
   ],
+  css: ['~/assets/css/main.css'],
   supabase: {
     redirectOptions: {
       login: "/login",
       callback: "/confirm",
-      exclude: ["/"],
+      exclude: ["/signup", "/"],
     },
   },
 });
