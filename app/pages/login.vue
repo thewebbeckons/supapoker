@@ -46,11 +46,6 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
             color: 'error'
         })
     } else {
-        toast.add({
-            title: 'Success',
-            description: 'You have been logged in!',
-            color: 'success'
-        })
         await navigateTo('/rooms')
     }
 }
@@ -65,9 +60,13 @@ watchEffect(() => {
 <template>
     <div class="flex flex-col gap-4">
         <UAuthForm title="Login" description="Enter your credentials to access your account." icon="i-lucide-user"
-            :fields="fields" :schema="schema" @submit="onSubmit" />
+            :fields="fields" :schema="schema" @submit="onSubmit">
+            <template #password-hint>
+                <ULink to="/forgot-password" class="text-primary font-medium" tabindex="-1">Forgot password?</ULink>
+            </template>
+        </UAuthForm>
         <div class="text-center text-sm text-neutral-400">
-            Don't have an account? <NuxtLink to="/signup" class="text-white hover:underline">Sign up</NuxtLink>
+            Don't have an account? <NuxtLink to="/signup" class="text-primary hover:underline">Sign up</NuxtLink>
         </div>
     </div>
 </template>
