@@ -165,6 +165,14 @@ function selectCard(cardValue: number) {
 
 const settingsItems = computed(() => [
     [{
+        label: 'Poke Users',
+        icon: 'i-lucide-megaphone',
+        onSelect: () => {
+            const audio = new Audio('/cawcaw.mp3')
+            audio.play()
+        }
+    }],
+    [{
         label: 'Edit Room Details',
         icon: 'i-lucide-pencil',
         onSelect: () => openEditModal()
@@ -281,7 +289,7 @@ const settingsItems = computed(() => [
                         <div v-for="story in STORIES" :key="story.title"
                             class="flex items-center px-6 py-3 bg-primary-50/50 dark:bg-primary-900/10 border-l-4 border-primary-500">
                             <span class="text-sm font-medium text-neutral-700 dark:text-neutral-200">{{ story.title
-                                }}</span>
+                            }}</span>
                         </div>
                     </div>
                 </div>
