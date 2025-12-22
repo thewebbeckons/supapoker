@@ -58,10 +58,6 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     }
 
 
-    state.name = ''
-    state.email = ''
-    state.password = ''
-
     toast.add({
         title: 'Success',
         description: 'Account created! Please check your email to confirm your account.',
@@ -73,6 +69,12 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
         navigateTo('/login')
     }, 2000)
 }
+
+onUnmounted(() => {
+    state.name = ''
+    state.email = ''
+    state.password = ''
+})
 </script>
 
 <template>
