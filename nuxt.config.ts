@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: "2025-12-01",
   devtools: {
-    enabled: true,    
+    enabled: true,
   },
   modules: [
     "@nuxt/ui",
@@ -10,12 +10,12 @@ export default defineNuxtConfig({
     "@nuxtjs/supabase",
     "@nuxt/hints",
   ],
-  css: ['~/assets/css/main.css'],
+  css: ["~/assets/css/main.css"],
   supabase: {
     redirectOptions: {
       login: "/login",
       callback: "/confirm",
-      exclude: ["/signup", "/", "/forgot-password"],
+      exclude: ["/signup", "/", "/forgot-password", "/privacy"],
     },
   },
 });
