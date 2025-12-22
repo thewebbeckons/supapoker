@@ -33,7 +33,7 @@ const players = ref<any[]>([])
 const channel = client.channel(`room:${roomId}`, {
     config: {
         presence: {
-            key: user.value?.id,
+            key: user.value?.sub,
         },
     },
 })
@@ -44,7 +44,7 @@ const { data: userProfile } = await useAsyncData('user-profile', async () => {
     const { data } = await client
         .from('profile')
         .select('name, avatar')
-        .eq('user_id', user.value.id)
+        .eq('user_id', user.value.sub)
         .single()
     return data
 })
@@ -95,7 +95,7 @@ onMounted(async () => {
             .from('room_participants')
             .upsert({
                 room_id: roomId,
-                user_id: user.value.id,
+                user_id: user.value.sub,
                 joined_at: new Date().toISOString()
             }, { onConflict: 'room_id,user_id' }) // Just update joined_at if exists
     }
@@ -111,7 +111,7 @@ onMounted(async () => {
         .subscribe(async (status) => {
             if (status === 'SUBSCRIBED') {
                 await channel.track({
-                    user_id: user.value?.id,
+                    user_id: user.value?.sub,
                     online_at: new Date().toISOString(),
                 })
             }
@@ -149,18 +149,33 @@ function copyRoomUrl() {
 
 const isEditModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
+const isNewStoryModalOpen = ref(false)
 
 const canEdit = computed(() => {
-    return user.value && room.value && user.value.sub === room.value.created_by
+    return user.value && room.value && room.value.created_by === user.value.sub
 })
 
-function openEditModal() {
+function openEditModal(): void {
     isEditModalOpen.value = true
 }
 
 function selectCard(cardValue: number) {
     selectedCard.value = cardValue
 }
+
+const settingsItems = computed(() => [
+    [{
+        label: 'Edit Room Details',
+        icon: 'i-lucide-pencil',
+        onSelect: () => openEditModal()
+    }],
+    [{
+        label: 'Delete Room',
+        icon: 'i-lucide-trash-2',
+        color: 'error' as const,
+        onSelect: () => { isDeleteModalOpen.value = true }
+    }]
+])
 </script>
 
 <template>
@@ -188,21 +203,22 @@ function selectCard(cardValue: number) {
                     </div>
                     <!-- Room Actions/Edit -->
                     <div class="flex items-center self-center gap-2">
-                        <UTooltip text="Edit Room Details">
-                            <UButton v-if="canEdit" icon="i-lucide-pencil" color="neutral" variant="ghost" size="sm"
-                                @click="openEditModal" />
-                        </UTooltip>
-                        <UTooltip text="Delete Room">
-                            <UButton v-if="canEdit" icon="i-lucide-trash-2" color="error" variant="ghost" size="sm"
-                                @click="isDeleteModalOpen = true" />
-                        </UTooltip>
+                        <UButton v-if="canEdit" label="New Story" icon="i-lucide-plus" color="primary" size="sm"
+                            @click="isNewStoryModalOpen = true" />
+
+                        <UDropdownMenu v-if="canEdit" :items="settingsItems"
+                            :content="{ align: 'end', side: 'bottom' }">
+                            <UButton icon="i-lucide-settings" color="neutral" variant="ghost" size="sm" />
+                        </UDropdownMenu>
                     </div>
                 </div>
 
                 <div class="flex-1 flex flex-col justify-center items-center gap-8 overflow-y-auto p-6">
                     <!-- Current Story Indicator -->
                     <div class="text-center">
-                        <span class="text-lg font-medium text-neutral-600 dark:text-neutral-400">5372</span>
+                        <span class="text-lg font-medium text-neutral-600 dark:text-neutral-400">
+                            {{ room.current_story_card || 'No Active Story' }}
+                        </span>
                     </div>
 
                     <!-- Cards Grid -->
@@ -265,7 +281,7 @@ function selectCard(cardValue: number) {
                         <div v-for="story in STORIES" :key="story.title"
                             class="flex items-center px-6 py-3 bg-primary-50/50 dark:bg-primary-900/10 border-l-4 border-primary-500">
                             <span class="text-sm font-medium text-neutral-700 dark:text-neutral-200">{{ story.title
-                            }}</span>
+                                }}</span>
                         </div>
                     </div>
                 </div>
@@ -327,6 +343,9 @@ function selectCard(cardValue: number) {
 
         <!-- Edit Room Modal -->
         <RoomEditModal v-model="isEditModalOpen" :room="room" @success="refresh" />
+
+        <!-- New Story Modal -->
+        <RoomNewStoryModal v-model="isNewStoryModalOpen" :room="room" @success="refresh" />
 
         <!-- Delete Room Modal -->
         <RoomDeleteModal v-model="isDeleteModalOpen" :room="room" />
