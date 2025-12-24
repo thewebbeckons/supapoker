@@ -107,33 +107,34 @@ async function createRoom() {
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <UCard v-for="room in filteredRooms" :key="room.id" @click="navigateTo(`/rooms/${room.id}`)"
-                class="hover:ring-2 hover:ring-primary-500/50 transition-all cursor-pointer">
-                <template #header>
-                    <div class="flex flex-col items-start gap-1">
-                        <h3 class="font-bold text-lg truncate w-full">{{ room.name }}</h3>
-                        <p v-if="room.description" class="text-sm text-neutral-500 line-clamp-2 font-normal">
-                            {{ room.description }}
-                        </p>
+                class="hover:ring-2 hover:ring-primary-500/50 transition-all cursor-pointer flex flex-col h-full"
+                :ui="{ body: 'flex-1' }">
+                <div class="flex flex-col items-start gap-1">
+                    <h3 class="font-bold text-lg truncate w-full">{{ room.name }}</h3>
+                    <p v-if="room.description" class="text-sm text-neutral-500 line-clamp-2 font-normal">
+                        {{ room.description }}
+                    </p>
+                </div>
+
+                <template #footer>
+                    <div class="flex justify-between items-center">
+                        <div class="text-sm text-neutral-500 flex items-center gap-2">
+                            <UIcon name="i-lucide-clock" class="w-4 h-4" />
+                            <!-- We need a way to use useTimeAgo here. 
+                     Since useTimeAgo returns a ref, using it directly in template: {{ useTimeAgo(date).value }} 
+                     creates a new ref on every render.
+                     Let's create a specialized component for this part to be clean.
+                -->
+                            <ClientOnly>
+                                <LastUsedTime :time="room.lastUsed" />
+                            </ClientOnly>
+                        </div>
+
+                        <UBadge :color="room.role === 'creator' ? 'primary' : 'neutral'" variant="subtle" size="xs">
+                            {{ room.role }}
+                        </UBadge>
                     </div>
                 </template>
-
-                <div class="flex justify-between items-center">
-                    <div class="text-sm text-neutral-500 flex items-center gap-2">
-                        <UIcon name="i-lucide-clock" class="w-4 h-4" />
-                        <!-- We need a way to use useTimeAgo here. 
-                 Since useTimeAgo returns a ref, using it directly in template: {{ useTimeAgo(date).value }} 
-                 creates a new ref on every render.
-                 Let's create a specialized component for this part to be clean.
-            -->
-                        <ClientOnly>
-                            <LastUsedTime :time="room.lastUsed" />
-                        </ClientOnly>
-                    </div>
-
-                    <UBadge :color="room.role === 'creator' ? 'primary' : 'neutral'" variant="subtle" size="xs">
-                        {{ room.role }}
-                    </UBadge>
-                </div>
             </UCard>
         </div>
 

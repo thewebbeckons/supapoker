@@ -18,7 +18,7 @@ const emit = defineEmits<{
 const client = useSupabaseClient<Database>()
 const toast = useToast()
 
-const storyName = ref('')
+const storiesInput = ref('')
 const isUpdating = ref(false)
 
 const isOpen = computed({
@@ -28,47 +28,62 @@ const isOpen = computed({
 
 watch(() => props.modelValue, (val) => {
     if (val) {
-        storyName.value = ''
+        storiesInput.value = ''
     }
 })
 
-async function createStory() {
-    if (!storyName.value.trim() || !props.room) return
+async function createStories() {
+    if (!storiesInput.value.trim() || !props.room) return
 
     isUpdating.value = true
-    const { error: updateError } = await client
-        .from('rooms')
-        .update({
-            current_story_card: storyName.value,
-            updated_at: new Date().toISOString()
-        })
-        .eq('id', props.room.id)
+
+    // Split by newline and filter empty lines
+    const titles = storiesInput.value
+        .split('\n')
+        .map(t => t.trim())
+        .filter(t => t.length > 0)
+
+    if (titles.length === 0) {
+        isUpdating.value = false
+        return
+    }
+
+    const { error: insertError } = await client
+        .from('stories')
+        .insert(
+            titles.map(title => ({
+                room_id: props.room!.id,
+                title,
+                status: 'pending' // Default status
+            }))
+        )
 
     isUpdating.value = false
 
-    if (updateError) {
-        toast.add({ title: 'Error', description: updateError.message, color: 'error' })
+    if (insertError) {
+        toast.add({ title: 'Error', description: insertError.message, color: 'error' })
         return
     }
 
     emit('success')
     isOpen.value = false
+    toast.add({ title: 'Success', description: `Created ${titles.length} stor${titles.length === 1 ? 'y' : 'ies'}`, color: 'success' })
 }
 </script>
 
 <template>
-    <UModal v-model:open="isOpen" title="New Story" description="Set the active story for this room."
+    <UModal v-model:open="isOpen" title="New Story" description="Add stories to this room. Enter one story per line."
         :ui="{ content: 'sm:max-w-xl' }">
         <template #body>
             <div class="flex flex-col gap-4">
-                <UFormField label="Story Name" required>
-                    <UInput v-model="storyName" placeholder="e.g. USER-123 Login Page" @keydown.enter="createStory"
-                        class="w-full" autofocus />
+                <UFormField label="Stories" required>
+                    <UTextarea v-model="storiesInput" placeholder="USER-123 Login Page&#10;USER-124 Signup Page"
+                        :rows="5" class="w-full" autofocus />
                 </UFormField>
 
                 <div class="flex justify-end gap-2">
                     <UButton label="Cancel" color="neutral" variant="ghost" @click="isOpen = false" />
-                    <UButton label="Set Active" color="primary" @click="createStory" :disabled="!storyName.trim()"
+                    <UButton label="Create" color="primary" @click="createStories" :disabled="!storiesInput.trim()"
                         :loading="isUpdating" />
                 </div>
             </div>
