@@ -188,6 +188,10 @@ const canEdit = computed(() => {
     return !!(user.value && room.value && room.value.created_by === user.value.sub)
 })
 
+const activeStory = computed(() => {
+    return stories.value?.find((s: any) => s.status === 'active')
+})
+
 function openEditModal(): void {
     isEditModalOpen.value = true
 }
@@ -301,10 +305,22 @@ function onDeleteStory(story: any) {
 
                 <div class="flex-1 flex flex-col justify-center items-center gap-8 overflow-y-auto p-6">
                     <!-- Current Story Indicator -->
-                    <div class="text-center">
-                        <span class="text-lg font-medium text-neutral-600 dark:text-neutral-400">
-                            <!-- Placeholder for active story logic, currently just showing static or nothing until selection logic is added -->
-                            {{ room.current_story_card || 'No Active Story' }}
+                    <div class="text-center min-h-[32px] flex items-center justify-center gap-4">
+                        <template v-if="activeStory">
+                            <h2 class="text-xl font-semibold text-neutral-800 dark:text-neutral-100">
+                                {{ activeStory.title }}
+                            </h2>
+                            <div v-if="canEdit" class="flex items-center gap-2">
+                                <UButton size="sm" color="primary" variant="solid" icon="i-lucide-play-circle">
+                                    Start Vote
+                                </UButton>
+                                <UButton size="sm" color="success" variant="subtle" icon="i-lucide-check-circle">
+                                    Complete Story
+                                </UButton>
+                            </div>
+                        </template>
+                        <span v-else class="text-lg font-medium text-neutral-400 dark:text-neutral-500">
+                            No Active Story
                         </span>
                     </div>
 
