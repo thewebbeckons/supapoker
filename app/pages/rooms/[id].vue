@@ -185,7 +185,7 @@ const isStoryDeleteModalOpen = ref(false)
 const selectedStory = ref<any>(null)
 
 const canEdit = computed(() => {
-    return user.value && room.value && room.value.created_by === user.value.sub
+    return !!(user.value && room.value && room.value.created_by === user.value.sub)
 })
 
 function openEditModal(): void {
