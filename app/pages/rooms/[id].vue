@@ -89,17 +89,6 @@ async function fetchParticipants() {
 }
 
 onMounted(async () => {
-    // 1. Mark as participant
-    if (user.value) {
-        await client
-            .from('room_participants')
-            .upsert({
-                room_id: roomId,
-                user_id: user.value.sub,
-                joined_at: new Date().toISOString()
-            }, { onConflict: 'room_id,user_id' }) // Just update joined_at if exists
-    }
-
     // 2. Setup Realtime
     channel
         .on('presence', { event: 'sync' }, () => {
@@ -119,25 +108,66 @@ onMounted(async () => {
 
     // Initial fetch
     await fetchParticipants()
+
+    // 3. Setup Stories Realtime
+    const storiesChannel = client.channel(`room-stories:${roomId}`)
+        .on(
+            'postgres_changes',
+            { event: '*', schema: 'public', table: 'stories', filter: `room_id=eq.${roomId}` },
+            () => {
+                refreshStories()
+            }
+        )
+        .subscribe()
 })
 
 onUnmounted(() => {
     channel.unsubscribe()
 })
 
-const STORIES = [
-    { title: '5372', status: 'Active' }
-]
+const { data: stories, refresh: refreshStories } = await useAsyncData(`room-stories-${roomId}`, async () => {
+    const { data } = await client
+        .from('stories')
+        .select('*')
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true })
+    return data || []
+})
 
+// Combined data fetching: Participate first, then fetch room
+// We wrap this in useAsyncData to handle the async state and errors gracefully.
 const { data: room, status, error, refresh } = await useAsyncData(`room-${roomId}`, async () => {
-    const { data, error } = await client
+    // 1. Ensure user is logged in
+    if (!user.value) throw new Error('User not authenticated')
+
+    // 2. Add to participants table BEFORE fetching room
+    // This is required because RLS policies now restrict "select" on rooms 
+    // to only creators or existing participants.
+    const { error: joinError } = await client
+        .from('room_participants')
+        .upsert({
+            room_id: roomId,
+            user_id: user.value.sub,
+            joined_at: new Date().toISOString()
+        }, { onConflict: 'room_id,user_id' })
+
+    if (joinError) {
+        console.error('Failed to join room:', joinError)
+        // We might continue if it's just a duplicate, but upsert handles that.
+        // If it's a real error, we might fail early or try to fetch anyway.
+    }
+
+    // 3. Fetch Room Data
+    const { data, error: fetchError } = await client
         .from('rooms')
         .select('*')
         .eq('id', roomId)
         .single()
 
-    if (error) throw error
+    if (fetchError) throw fetchError
     return data
+}, {
+    watch: [user]
 })
 
 const selectedCard = ref<number | null>(3) // Default to 3 for visual match with screenshot
@@ -150,6 +180,9 @@ function copyRoomUrl() {
 const isEditModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
 const isNewStoryModalOpen = ref(false)
+const isStoryEditModalOpen = ref(false)
+const isStoryDeleteModalOpen = ref(false)
+const selectedStory = ref<any>(null)
 
 const canEdit = computed(() => {
     return user.value && room.value && room.value.created_by === user.value.sub
@@ -184,6 +217,51 @@ const settingsItems = computed(() => [
         onSelect: () => { isDeleteModalOpen.value = true }
     }]
 ])
+
+async function onSetActive(story: any) {
+    if (!room.value || !story) return
+
+    // 1. Set all other stories to pending if they were active (optional, but good for cleanup)
+    // Actually, we just need to set this one to active. 
+    // AND we probably want to set the room's current_story_card to null if we switch stories?
+    // For now, let's just update the status.
+
+    // Better approach:
+    // 1. Update this story to 'active'
+    // 2. Update all other 'active' stories to 'pending' (or 'completed'?) - usually pending if not voted.
+    // Let's just set this one to active. The UI highlighting handles the rest.
+    // However, to ensure only one is active:
+
+    // Batch update: set all active stories in this room to pending
+    await client
+        .from('stories')
+        .update({ status: 'pending' })
+        .eq('room_id', roomId)
+        .eq('status', 'active')
+
+    // Set target story to active
+    const { error } = await client
+        .from('stories')
+        .update({ status: 'active' })
+        .eq('id', story.id)
+
+    if (error) {
+        toast.add({ title: 'Error', description: error.message, color: 'error' })
+    } else {
+        toast.add({ title: 'Active Story Updated', color: 'success' })
+        refreshStories()
+    }
+}
+
+function onEditStory(story: any) {
+    selectedStory.value = story
+    isStoryEditModalOpen.value = true
+}
+
+function onDeleteStory(story: any) {
+    selectedStory.value = story
+    isStoryDeleteModalOpen.value = true
+}
 </script>
 
 <template>
@@ -225,6 +303,7 @@ const settingsItems = computed(() => [
                     <!-- Current Story Indicator -->
                     <div class="text-center">
                         <span class="text-lg font-medium text-neutral-600 dark:text-neutral-400">
+                            <!-- Placeholder for active story logic, currently just showing static or nothing until selection logic is added -->
                             {{ room.current_story_card || 'No Active Story' }}
                         </span>
                     </div>
@@ -265,34 +344,8 @@ const settingsItems = computed(() => [
                 </div>
 
                 <!-- Stories Panel (Bottom) -->
-                <div
-                    class="h-48 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex flex-col">
-                    <div class="flex items-center gap-6 px-6 py-3 border-b border-neutral-100 dark:border-neutral-800">
-                        <button class="text-sm font-semibold text-neutral-900 dark:text-white flex items-center gap-2">
-                            Active Stories
-                            <UBadge color="error" size="xs" class="rounded-full">1</UBadge>
-                        </button>
-                        <button
-                            class="text-sm font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 flex items-center gap-2">
-                            Completed Stories
-                            <UBadge color="neutral" variant="soft" size="xs" class="rounded-full">1491
-                            </UBadge>
-                        </button>
-                        <button
-                            class="text-sm font-medium text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200 flex items-center gap-2">
-                            All Stories
-                            <UBadge color="neutral" variant="soft" size="xs" class="rounded-full">1492
-                            </UBadge>
-                        </button>
-                    </div>
-                    <div class="p-0 overflow-y-auto">
-                        <div v-for="story in STORIES" :key="story.title"
-                            class="flex items-center px-6 py-3 bg-primary-50/50 dark:bg-primary-900/10 border-l-4 border-primary-500">
-                            <span class="text-sm font-medium text-neutral-700 dark:text-neutral-200">{{ story.title
-                            }}</span>
-                        </div>
-                    </div>
-                </div>
+                <RoomStoriesPanel :stories="stories || []" :can-manage="canEdit" @set-active="onSetActive"
+                    @edit="onEditStory" @delete="onDeleteStory" />
             </div>
 
             <!-- Sidebar Grid -->
@@ -353,9 +406,13 @@ const settingsItems = computed(() => [
         <RoomEditModal v-model="isEditModalOpen" :room="room" @success="refresh" />
 
         <!-- New Story Modal -->
-        <RoomNewStoryModal v-model="isNewStoryModalOpen" :room="room" @success="refresh" />
+        <RoomNewStoryModal v-model="isNewStoryModalOpen" :room="room" @success="refreshStories" />
 
         <!-- Delete Room Modal -->
         <RoomDeleteModal v-model="isDeleteModalOpen" :room="room" />
+
+        <!-- Story Edit/Delete Modals -->
+        <RoomStoryEditModal v-model="isStoryEditModalOpen" :story="selectedStory" @success="refreshStories" />
+        <RoomStoryDeleteModal v-model="isStoryDeleteModalOpen" :story="selectedStory" @success="refreshStories" />
     </div>
 </template>
