@@ -27,7 +27,12 @@ const items = [{
 }] satisfies TabsItem[]
 
 const activeStories = computed(() => {
-    return props.stories?.filter(s => ['pending', 'active'].includes(s.status)) || []
+    const stories = props.stories?.filter(s => ['pending', 'active'].includes(s.status)) || []
+    return stories.sort((a, b) => {
+        if (a.status === 'active') return -1
+        if (b.status === 'active') return 1
+        return 0
+    })
 })
 
 const completedStories = computed(() => {
@@ -58,14 +63,14 @@ const allCount = computed(() => allStories.value.length)
                             class="group flex items-center px-6 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
                             :class="story.status === 'active' ? 'bg-primary-50/50 dark:bg-primary-900/10 border-l-4 border-l-primary-500' : ''">
                             <span class="text-sm font-medium text-neutral-700 dark:text-neutral-200">{{ story.title
-                                }}</span>
+                            }}</span>
                             <div class="ml-auto flex items-center gap-1">
                                 <span v-if="story.status === 'active'"
                                     class="text-xs uppercase font-bold px-2 py-0.5 rounded bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300">
                                     {{ story.status }}
                                 </span>
                                 <template v-if="canManage">
-                                    <UTooltip text="Set Active">
+                                    <UTooltip v-if="story.status !== 'active'" text="Set Active">
                                         <UButton icon="i-lucide-play" color="neutral" variant="ghost" size="xs"
                                             class="opacity-0 group-hover:opacity-100 transition-opacity"
                                             @click="emit('set-active', story)" />
@@ -97,7 +102,7 @@ const allCount = computed(() => allStories.value.length)
                         <div v-for="story in completedStories" :key="story.id"
                             class="group flex items-center px-6 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
                             <span class="text-sm font-medium text-neutral-700 dark:text-neutral-200">{{ story.title
-                                }}</span>
+                            }}</span>
                             <div class="ml-auto flex items-center gap-1">
                                 <span
                                     class="text-xs uppercase font-bold px-2 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300">
@@ -132,7 +137,7 @@ const allCount = computed(() => allStories.value.length)
                             class="group flex items-center px-6 py-3 border-b border-neutral-100 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors"
                             :class="story.status === 'active' ? 'bg-primary-50/50 dark:bg-primary-900/10 border-l-4 border-l-primary-500' : ''">
                             <span class="text-sm font-medium text-neutral-700 dark:text-neutral-200">{{ story.title
-                                }}</span>
+                            }}</span>
                             <div class="ml-auto flex items-center gap-1">
                                 <span v-if="story.status !== 'pending'"
                                     class="text-xs uppercase font-bold px-2 py-0.5 rounded"
