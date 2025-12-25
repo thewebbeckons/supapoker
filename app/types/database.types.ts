@@ -124,31 +124,31 @@ export type Database = {
       };
       stories: {
         Row: {
-          id: string;
           created_at: string;
-          updated_at: string;
-          room_id: string;
-          title: string;
-          status: string;
           created_by: string | null;
+          id: string;
+          room_id: string;
+          status: string;
+          title: string;
+          updated_at: string;
         };
         Insert: {
-          id?: string;
           created_at?: string;
-          updated_at?: string;
-          room_id: string;
-          title: string;
-          status?: string;
           created_by?: string | null;
+          id?: string;
+          room_id: string;
+          status?: string;
+          title: string;
+          updated_at?: string;
         };
         Update: {
-          id?: string;
           created_at?: string;
-          updated_at?: string;
-          room_id?: string;
-          title?: string;
-          status?: string;
           created_by?: string | null;
+          id?: string;
+          room_id?: string;
+          status?: string;
+          title?: string;
+          updated_at?: string;
         };
         Relationships: [
           {
@@ -156,6 +156,48 @@ export type Database = {
             columns: ["room_id"];
             isOneToOne: false;
             referencedRelation: "rooms";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      story_votes: {
+        Row: {
+          created_at: string;
+          id: string;
+          room_id: string;
+          story_id: string;
+          user_id: string;
+          vote_value: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          room_id: string;
+          story_id: string;
+          user_id: string;
+          vote_value: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          room_id?: string;
+          story_id?: string;
+          user_id?: string;
+          vote_value?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "story_votes_room_id_fkey";
+            columns: ["room_id"];
+            isOneToOne: false;
+            referencedRelation: "rooms";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "story_votes_story_id_fkey";
+            columns: ["story_id"];
+            isOneToOne: false;
+            referencedRelation: "stories";
             referencedColumns: ["id"];
           },
         ];
@@ -227,15 +269,13 @@ export type TablesInsert<
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]][
+  } ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]][
       "Tables"
     ]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]][
+} ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]][
     "Tables"
   ][TableName] extends {
     Insert: infer I;
@@ -254,15 +294,13 @@ export type TablesUpdate<
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]][
+  } ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]][
       "Tables"
     ]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]][
+} ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]][
     "Tables"
   ][TableName] extends {
     Update: infer U;
@@ -281,15 +319,13 @@ export type Enums<
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]][
+  } ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]][
       "Enums"
     ]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][
+} ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][
     EnumName
   ]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
@@ -302,15 +338,13 @@ export type CompositeTypes<
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals;
-  }
-    ? keyof DatabaseWithoutInternals[
+  } ? keyof DatabaseWithoutInternals[
       PublicCompositeTypeNameOrOptions["schema"]
     ]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals;
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]][
+} ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]][
     "CompositeTypes"
   ][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends
