@@ -213,8 +213,8 @@ onMounted(async () => {
                             const oldStatus = story.status
                             const newStatus = payload.new.status
 
-                            // Update the story locally
-                            stories.value[idx] = { ...story, ...payload.new }
+                            // Update the story locally by mutating in place for proper reactivity
+                            Object.assign(stories.value[idx]!, payload.new)
 
                             // If status changed to voting (Start or Restart Vote), clear votes locally
                             // This gives instant feedback for "restart vote"
@@ -354,40 +354,79 @@ async function onSetActive(story: any) {
 async function onStartVote() {
     if (!activeStory.value || !room.value) return
 
-    // Clear existing votes for this story first? Or just let them be overwritten?
-    // Let's clear them to be safe for a fresh vote.
-    // Actually, maybe we keep history? But for now, let's just clear.
-    await client.from('story_votes').delete().eq('story_id', activeStory.value.id)
+    const storyId = activeStory.value.id
+    const newUpdatedAt = new Date().toISOString()
+
+    // Clear existing votes for this story first
+    await client.from('story_votes').delete().eq('story_id', storyId)
 
     const { error } = await client
         .from('stories')
         .update({
             status: 'voting',
-            updated_at: new Date().toISOString() // Use this as start time
+            updated_at: newUpdatedAt
         })
-        .eq('id', activeStory.value.id)
+        .eq('id', storyId)
 
-    if (error) toast.add({ title: 'Error starting vote', description: error.message, color: 'error' })
+    if (error) {
+        toast.add({ title: 'Error starting vote', description: error.message, color: 'error' })
+    } else {
+        // Optimistic update: Update local state immediately
+        const idx = stories.value?.findIndex((s: any) => s.id === storyId)
+        if (idx !== undefined && idx !== -1 && stories.value) {
+            stories.value[idx]!.status = 'voting'
+            stories.value[idx]!.updated_at = newUpdatedAt
+        }
+        // Clear local votes state
+        votes.value = {}
+        selectedCard.value = null
+        if (players.value) {
+            players.value.forEach(p => {
+                p.vote = null
+                p.hasVoted = false
+            })
+        }
+    }
 }
 
 async function onStopVote() {
     if (!activeStory.value) return
+    const storyId = activeStory.value.id
+
     const { error } = await client
         .from('stories')
         .update({ status: 'voted' })
-        .eq('id', activeStory.value.id)
+        .eq('id', storyId)
 
-    if (error) toast.add({ title: 'Error stopping vote', description: error.message, color: 'error' })
+    if (error) {
+        toast.add({ title: 'Error stopping vote', description: error.message, color: 'error' })
+    } else {
+        // Optimistic update: Update local state immediately
+        const idx = stories.value?.findIndex((s: any) => s.id === storyId)
+        if (idx !== undefined && idx !== -1 && stories.value) {
+            stories.value[idx]!.status = 'voted'
+        }
+    }
 }
 
 async function onCompleteStory() {
     if (!activeStory.value) return
+    const storyId = activeStory.value.id
+
     const { error } = await client
         .from('stories')
         .update({ status: 'completed' })
-        .eq('id', activeStory.value.id)
+        .eq('id', storyId)
 
-    if (error) toast.add({ title: 'Error completing story', description: error.message, color: 'error' })
+    if (error) {
+        toast.add({ title: 'Error completing story', description: error.message, color: 'error' })
+    } else {
+        // Optimistic update: Update local state immediately
+        const idx = stories.value?.findIndex((s: any) => s.id === storyId)
+        if (idx !== undefined && idx !== -1 && stories.value) {
+            stories.value[idx]!.status = 'completed'
+        }
+    }
 }
 
 function onEditStory(story: any) {
