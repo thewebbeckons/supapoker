@@ -27,7 +27,7 @@ const items = [{
 }] satisfies TabsItem[]
 
 const activeStories = computed(() => {
-    const stories = props.stories?.filter(s => ['pending', 'active'].includes(s.status)) || []
+    const stories = props.stories?.filter(s => ['pending', 'active', 'voting', 'voted'].includes(s.status)) || []
     return stories.sort((a, b) => {
         if (a.status === 'active') return -1
         if (b.status === 'active') return 1
@@ -36,7 +36,7 @@ const activeStories = computed(() => {
 })
 
 const completedStories = computed(() => {
-    return props.stories?.filter(s => s.status === 'completed' || s.status === 'voted') || []
+    return props.stories?.filter(s => s.status === 'completed') || []
 })
 
 const allStories = computed(() => {
@@ -65,8 +65,12 @@ const allCount = computed(() => allStories.value.length)
                             <span class="text-sm font-medium text-neutral-700 dark:text-neutral-200">{{ story.title
                             }}</span>
                             <div class="ml-auto flex items-center gap-1">
-                                <span v-if="story.status === 'active'"
-                                    class="text-xs uppercase font-bold px-2 py-0.5 rounded bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300">
+                                <span v-if="['active', 'voting', 'voted'].includes(story.status)"
+                                    class="text-xs uppercase font-bold px-2 py-0.5 rounded" :class="{
+                                        'bg-primary-100 text-primary-700 dark:bg-primary-900 dark:text-primary-300': story.status === 'active',
+                                        'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300': story.status === 'voting',
+                                        'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300': story.status === 'voted'
+                                    }">
                                     {{ story.status }}
                                 </span>
                                 <template v-if="canManage">

@@ -58,7 +58,7 @@ async function deleteStory() {
                             <h3 class="text-sm font-medium text-error-800 dark:text-error-200">Warning</h3>
                             <p class="text-sm text-error-600 dark:text-error-300 mt-1">
                                 You are about to delete <strong>{{ story?.title }}</strong>. This action cannot be
-                                undo.
+                                undone.
                             </p>
                         </div>
                     </div>
