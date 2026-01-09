@@ -53,18 +53,20 @@ function copyRoomUrl() {
                         <div class="flex items-center gap-1.5">
                             <span class="text-sm font-medium text-neutral-900 dark:text-white min-h-5">{{
                                 player.name }}</span>
-                            <UIcon v-if="player.hasVoted" name="i-lucide-circle-check"
-                                class="w-4.5 h-4.5 text-primary-500" />
                         </div>
                         <span class="text-xs text-neutral-400">{{ player.time }}</span>
                     </div>
+                    <UIcon v-if="player.hasVoted" name="i-lucide-circle-check"
+                        class="w-4.5 h-4.5 text-primary-500 flex items-center justify-center" />
                 </div>
-                <div class="text-lg font-medium text-neutral-700 dark:text-neutral-300">
-                    <template v-if="isVoted || player.id === user?.sub">
-                        <UIcon v-if="player.vote === 'coffee'" name="i-lucide-coffee"
-                            class="w-6 h-6 text-neutral-900 dark:text-white" />
-                        <span v-else>{{ player.vote }}</span>
-                    </template>
+                <div class="flex items-center gap-2">                    
+                    <div class="text-lg font-medium text-neutral-700 dark:text-neutral-300">
+                        <template v-if="isVoted || player.id === user?.sub">
+                            <UIcon v-if="player.vote === 'coffee'" name="i-lucide-coffee"
+                                class="w-6 h-6 text-neutral-900 dark:text-white" />
+                            <span v-else>{{ player.vote }}</span>
+                        </template>
+                    </div>
                 </div>
             </div>
         </div>

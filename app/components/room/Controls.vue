@@ -7,16 +7,14 @@ const emit = defineEmits<{
     (e: 'new-story'): void
     (e: 'edit-room'): void
     (e: 'delete-room'): void
+    (e: 'poke-users'): void
 }>()
 
 const settingsItems = computed(() => [
     [{
         label: 'Poke Users',
         icon: 'i-lucide-megaphone',
-        onSelect: () => {
-            const audio = new Audio('/cawcaw.mp3')
-            audio.play()
-        }
+        onSelect: () => emit('poke-users')
     }],
     [{
         label: 'Edit Room Details',
