@@ -18,4 +18,8 @@ export default defineNuxtConfig({
       exclude: ["/signup", "/", "/forgot-password", "/privacy"],
     },
   },
+  routeRules: {
+    // Disable SSR for rooms to avoid hydration mismatches with real-time features
+    "/rooms/**": { ssr: false },
+  },
 });
