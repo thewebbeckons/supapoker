@@ -14,6 +14,7 @@ interface Room {
     role: "creator" | "participant";
     lastUsed: string; // Date string
 }
+type RoomRow = Database["public"]["Tables"]["rooms"]["Row"];
 
 const search = ref("");
 const isCreateRoomModalOpen = ref(false);
@@ -24,6 +25,16 @@ const newRoomDescription = ref("");
 const viewMode = useCookie<"card" | "list">("rooms-view-mode", {
     default: () => "card",
 });
+
+function mapRoomRow(room: RoomRow, userId: string): Room {
+    return {
+        id: room.id,
+        name: room.name,
+        description: room.description,
+        role: room.created_by === userId ? "creator" : "participant",
+        lastUsed: room.updated_at,
+    };
+}
 
 // Fetch rooms from Supabase
 const {
@@ -51,13 +62,7 @@ const {
         }
 
         const userId = user.value.sub;
-        return data.map((room: any) => ({
-            id: room.id,
-            name: room.name,
-            description: room.description,
-            role: room.created_by === userId ? "creator" : "participant",
-            lastUsed: room.updated_at,
-        })) as Room[];
+        return data.map((room: RoomRow) => mapRoomRow(room, userId));
     },
     {
         watch: [user],
@@ -71,6 +76,87 @@ const filteredRooms = computed(() => {
     return rooms.value.filter((room) =>
         room.name.toLowerCase().includes(search.value.toLowerCase()),
     );
+});
+
+function upsertRoomFromRealtime(roomRow: RoomRow) {
+    if (!rooms.value || !user.value) return;
+
+    const nextRoom = mapRoomRow(roomRow, user.value.sub);
+    const roomIndex = rooms.value.findIndex((room) => room.id === nextRoom.id);
+
+    if (roomIndex === -1) {
+        rooms.value = [nextRoom, ...rooms.value];
+    } else {
+        const nextRooms = [...rooms.value];
+        nextRooms[roomIndex] = nextRoom;
+        rooms.value = nextRooms;
+    }
+
+    rooms.value = [...rooms.value].sort(
+        (a, b) => new Date(b.lastUsed).getTime() - new Date(a.lastUsed).getTime(),
+    );
+}
+
+let roomsChannel: ReturnType<typeof client.channel> | null = null;
+
+function cleanupRoomsChannel() {
+    if (!roomsChannel) return;
+    client.removeChannel(roomsChannel);
+    roomsChannel = null;
+}
+
+function setupRoomsChannel() {
+    if (!user.value || roomsChannel) return;
+
+    roomsChannel = client.channel(`rooms-list:${user.value.sub}`);
+    roomsChannel
+        .on(
+            "postgres_changes",
+            {
+                event: "*",
+                schema: "public",
+                table: "rooms",
+            },
+            (payload: any) => {
+                if (!rooms.value) return;
+
+                if (payload.eventType === "DELETE") {
+                    rooms.value = rooms.value.filter(
+                        (room) => room.id !== payload.old.id,
+                    );
+                    return;
+                }
+
+                if (
+                    payload.eventType === "INSERT" ||
+                    payload.eventType === "UPDATE"
+                ) {
+                    upsertRoomFromRealtime(payload.new as RoomRow);
+                }
+            },
+        )
+        .subscribe();
+}
+
+watch(
+    user,
+    (nextUser, previousUser) => {
+        if (!nextUser) {
+            cleanupRoomsChannel();
+            return;
+        }
+
+        if (previousUser?.sub && previousUser.sub !== nextUser.sub) {
+            cleanupRoomsChannel();
+        }
+
+        setupRoomsChannel();
+    },
+    { immediate: true },
+);
+
+onUnmounted(() => {
+    cleanupRoomsChannel();
 });
 
 function openCreateRoomModal() {

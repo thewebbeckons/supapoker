@@ -10,6 +10,9 @@
         <!-- Appearance Section -->
         <AccountAppearance />
 
+        <!-- Poke Sound Section -->
+        <AccountPokeSound />
+
         <!-- Password Section -->
         <AccountPasswordChange />
     </div>

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>You're invited to SupaPoker</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:#eff6ff;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background-color:#eff6ff;padding:24px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;margin:0 auto;">
+            <tr>
+              <td style="background:#3b82f6;padding:20px 24px;border-radius:0;">
+                <p style="margin:0;font-family:'JetBrains Mono','SFMono-Regular',Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:12px;letter-spacing:0.14em;font-weight:700;color:#dbeafe;text-transform:uppercase;">
+                  SupaPoker Invite
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#ffffff;border:1px solid #bfdbfe;border-top:0;padding:30px 24px;border-radius:0;">
+                <h1 style="margin:0 0 14px;font-family:'JetBrains Mono','SFMono-Regular',Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:30px;line-height:1.2;color:#1d4ed8;font-weight:700;">
+                  You're invited
+                </h1>
+                <p style="margin:0 0 16px;font-family:'JetBrains Mono','SFMono-Regular',Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:15px;line-height:1.65;color:#0f172a;">
+                  You were invited to join SupaPoker with <strong>{{ .Email }}</strong>. Accept the invitation to create your account and join planning sessions.
+                </p>
+                <p style="margin:0 0 16px;">
+                  <a href="{{ .ConfirmationURL }}" style="display:inline-block;background:#3b82f6;border:1px solid #2563eb;color:#ffffff;text-decoration:none;font-family:'JetBrains Mono','SFMono-Regular',Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:15px;font-weight:700;border-radius:0;padding:12px 18px;">
+                    Accept Invite
+                  </a>
+                </p>
+                <p style="margin:18px 0 0;font-family:'JetBrains Mono','SFMono-Regular',Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;font-size:12px;line-height:1.7;color:#334155;">
+                  Button not working? Copy and paste this link:<br />
+                  <a href="{{ .ConfirmationURL }}" style="color:#2563eb;text-decoration:underline;word-break:break-all;">
+                    {{ .ConfirmationURL }}
+                  </a>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

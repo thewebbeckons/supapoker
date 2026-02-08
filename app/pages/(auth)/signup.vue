@@ -8,7 +8,6 @@ definePageMeta({
 })
 
 const supabase = useSupabaseClient<Database>()
-const user = useSupabaseUser()
 const toast = useToast()
 
 const schema = z.object({
