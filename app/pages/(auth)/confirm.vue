@@ -4,10 +4,44 @@ definePageMeta({
 })
 
 const user = useSupabaseUser()
+const route = useRoute()
+const redirectInfo = useSupabaseCookieRedirect()
+const hasRedirected = ref(false)
 
-watch(user, () => {
-  if (user.value) {
-    navigateTo('/rooms')
+function getQueryRedirectPath(): string | null {
+  const redirectTo = route.query.redirectTo
+  if (typeof redirectTo !== 'string' || !redirectTo.startsWith('/')) {
+    return null
+  }
+
+  if (redirectTo === '/login' || redirectTo === '/confirm') {
+    return null
+  }
+
+  return redirectTo
+}
+
+function getPostAuthPath(): string {
+  const queryPath = getQueryRedirectPath()
+  if (queryPath) return queryPath
+
+  const cookiePath = redirectInfo.pluck()
+  if (
+    typeof cookiePath === 'string' &&
+    cookiePath.startsWith('/') &&
+    cookiePath !== '/login' &&
+    cookiePath !== '/confirm'
+  ) {
+    return cookiePath
+  }
+
+  return '/rooms'
+}
+
+watch(user, async () => {
+  if (user.value && !hasRedirected.value) {
+    hasRedirected.value = true
+    await navigateTo(getPostAuthPath())
   }
 }, { immediate: true })
 </script>

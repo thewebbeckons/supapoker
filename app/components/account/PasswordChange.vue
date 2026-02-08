@@ -7,24 +7,33 @@ const supabase = useSupabaseClient()
 const toast = useToast()
 
 const changePasswordSchema = z.object({
+    currentPassword: z.string().min(1, 'Current password is required'),
     password: passwordSchema,
-    confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
 })
 
 type PasswordSchema = z.output<typeof changePasswordSchema>
 
 const passwordState = reactive<PasswordSchema>({
+    currentPassword: '',
     password: '',
-    confirmPassword: ''
 })
 
 const { passwordStrength, strengthScore, strengthColor } = usePasswordStrength(toRef(passwordState, 'password'))
 
+const user = useSupabaseUser()
+
 async function onPasswordSubmit(payload: FormSubmitEvent<PasswordSchema>) {
     try {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: user.value!.email!,
+            password: payload.data.currentPassword,
+        })
+
+        if (signInError) {
+            toast.add({ title: 'Error', description: 'Current password is incorrect', color: 'error' })
+            return
+        }
+
         const { error } = await supabase.auth.updateUser({
             password: payload.data.password
         })
@@ -32,8 +41,8 @@ async function onPasswordSubmit(payload: FormSubmitEvent<PasswordSchema>) {
         if (error) throw error
 
         toast.add({ title: 'Success', description: 'Password updated!', color: 'success' })
+        passwordState.currentPassword = ''
         passwordState.password = ''
-        passwordState.confirmPassword = ''
     } catch (error: any) {
         toast.add({ title: 'Error', description: error.message, color: 'error' })
     }
@@ -48,6 +57,10 @@ async function onPasswordSubmit(payload: FormSubmitEvent<PasswordSchema>) {
         </template>
 
         <UForm :schema="changePasswordSchema" :state="passwordState" class="space-y-4" @submit="onPasswordSubmit">
+            <UFormField label="Current Password" name="currentPassword">
+                <UInput v-model="passwordState.currentPassword" type="password" icon="i-lucide-lock" />
+            </UFormField>
+
             <UFormField label="New Password" name="password">
                 <UInput v-model="passwordState.password" type="password" icon="i-lucide-lock" />
 
@@ -63,10 +76,6 @@ async function onPasswordSubmit(payload: FormSubmitEvent<PasswordSchema>) {
                         </div>
                     </div>
                 </div>
-            </UFormField>
-
-            <UFormField label="Confirm Password" name="confirmPassword">
-                <UInput v-model="passwordState.confirmPassword" type="password" icon="i-lucide-lock" />
             </UFormField>
 
             <div class="flex justify-end">

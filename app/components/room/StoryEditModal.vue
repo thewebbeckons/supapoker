@@ -11,7 +11,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'update:modelValue', value: boolean): void
-    (e: 'success'): void
+    (e: 'success', payload: { id: string; title: string }): void
 }>()
 
 const client = useSupabaseClient<Database>()
@@ -48,7 +48,7 @@ async function updateStory() {
         return
     }
 
-    emit('success')
+    emit('success', { id: props.story!.id, title: titleInput.value })
     isOpen.value = false
     toast.add({ title: 'Success', description: 'Story updated.', color: 'success' })
 }

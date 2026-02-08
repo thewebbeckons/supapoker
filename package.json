@@ -7,13 +7,14 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "db:seed": "node scripts/seed-user.mjs"
   },
   "dependencies": {
     "@nuxt/ui": "^4.3.0",
     "@nuxtjs/supabase": "^2.0.3",
     "@vueuse/nuxt": "^14.1.0",
-    "nuxt": "^4.2.2",
+    "nuxt": "^4.3.1",
     "vue": "latest",
     "vue-router": "latest",
     "zod": "^4.2.1"
