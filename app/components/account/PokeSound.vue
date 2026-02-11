@@ -2,6 +2,11 @@
 const toast = useToast()
 const { pokeSoundEnabled, disablePokeSound, requestPokeSoundAuthorization } = usePokeSound()
 const testingPokeSound = ref(false)
+const isMounted = ref(false)
+
+onMounted(() => {
+    isMounted.value = true
+})
 
 async function onTogglePokeSound(enabled: boolean) {
     if (!enabled) {
@@ -66,7 +71,7 @@ async function onTestPokeSound() {
                     <p class="text-sm text-neutral-500">Enabling plays a quick sound to authorize audio for this tab.</p>
                 </div>
                 <USwitch
-                    :model-value="Boolean(pokeSoundEnabled)"
+                    :model-value="isMounted ? Boolean(pokeSoundEnabled) : false"
                     :disabled="testingPokeSound"
                     @update:model-value="onTogglePokeSound"
                 />

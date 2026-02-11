@@ -8,6 +8,7 @@ definePageMeta({
 
 const supabase = useSupabaseClient()
 const toast = useToast()
+const appOrigin = useRequestURL().origin
 
 const fields: AuthFormField[] = [{
     name: 'email',
@@ -34,7 +35,7 @@ const loading = ref(false)
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
     loading.value = true
     const { error } = await supabase.auth.resetPasswordForEmail(payload.data.email, {
-        redirectTo: window.location.origin + '/reset-password'
+        redirectTo: `${appOrigin}/reset-password`
     })
     loading.value = false
 

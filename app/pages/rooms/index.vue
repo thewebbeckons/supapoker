@@ -217,7 +217,6 @@ async function createRoom() {
                 />
             </div>
             <div class="flex items-center gap-2">
-                <UButtonGroup>
                     <UButton
                         icon="i-lucide-layout-grid"
                         :color="viewMode === 'card' ? 'primary' : 'neutral'"
@@ -232,7 +231,6 @@ async function createRoom() {
                         @click="viewMode = 'list'"
                         aria-label="List view"
                     />
-                </UButtonGroup>
             </div>
         </div>
 

@@ -5,6 +5,8 @@ useHead({
         { name: 'description', content: 'Our commitment to your privacy. No data selling, privacy-first analytics.' }
     ]
 })
+
+const lastUpdated = 'February 8, 2026'
 </script>
 <template>
     <UContainer class="py-12 max-w-3xl">
@@ -12,7 +14,7 @@ useHead({
             <div>
                 <h1 class="text-3xl font-bold mb-4">Privacy Policy</h1>
                 <p class="text-gray-500 dark:text-gray-400">
-                    Last updated: {{ new Date().toLocaleDateString() }}
+                    Last updated: {{ lastUpdated }}
                 </p>
             </div>
 

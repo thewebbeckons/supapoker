@@ -11,6 +11,7 @@ const user = useSupabaseUser()
 const route = useRoute()
 const toast = useToast()
 const loading = ref(false)
+const appOrigin = useRequestURL().origin
 const authForm = useTemplateRef<{ state: { password?: string } }>('authForm')
 const redirectInfo = useSupabaseCookieRedirect()
 const hasRedirected = ref(false)
@@ -80,7 +81,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     const queryRedirectPath = getQueryRedirectPath()
 
     try {
-        const confirmUrl = new URL('/confirm', window.location.origin)
+        const confirmUrl = new URL('/confirm', appOrigin)
         if (queryRedirectPath) {
             confirmUrl.searchParams.set('redirectTo', queryRedirectPath)
         }
