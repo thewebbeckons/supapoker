@@ -9,6 +9,7 @@ definePageMeta({
 
 const supabase = useSupabaseClient<Database>()
 const toast = useToast()
+const appOrigin = useRequestURL().origin
 
 const schema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -31,7 +32,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
         email: payload.data.email,
         password: payload.data.password,
         options: {
-            emailRedirectTo: window.location.origin + '/confirm',
+            emailRedirectTo: `${appOrigin}/confirm`,
             data: {
                 name: payload.data.name
             }

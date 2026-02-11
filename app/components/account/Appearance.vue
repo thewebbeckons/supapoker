@@ -13,8 +13,13 @@
                 <p class="font-medium text-neutral-900 dark:text-white">Color Theme</p>
                 <p class="text-sm text-neutral-500">Choose your preferred theme</p>
             </div>
-            <!-- Using UColorModeSelect as requested -->
-            <UColorModeSelect class="w-48" />
+            <ClientOnly>
+                <!-- Using UColorModeSelect as requested -->
+                <UColorModeSelect class="w-48" />
+                <template #fallback>
+                    <USkeleton class="h-10 w-48" />
+                </template>
+            </ClientOnly>
         </div>
     </UCard>
 </template>

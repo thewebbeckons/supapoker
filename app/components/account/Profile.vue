@@ -6,6 +6,7 @@ import type { Database } from '~/types/database.types'
 const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
 const toast = useToast()
+const isMounted = ref(false)
 
 const profileSchema = z.object({
     name: z.string().min(2, 'Name must be at least 2 characters'),
@@ -17,18 +18,25 @@ type ProfileSchema = z.output<typeof profileSchema>
 
 const profileState = reactive<ProfileSchema>({
     name: '',
-    email: user.value?.email || '',
+    email: '',
 })
 const avatarUrl = ref<string | null>(null)
 
-const { data: profile } = useAsyncData('profile', async () => {
-    if (!user.value) return
+const profileAsyncDataKey = computed(() => {
+    return user.value?.sub ? `profile:${user.value.sub}` : 'profile:anonymous'
+})
+
+const { data: profile } = useAsyncData(profileAsyncDataKey, async () => {
+    if (!user.value) return null
     const { data } = await supabase
         .from('profile')
         .select('name, avatar')
         .eq('user_id', user.value.sub)
         .single()
     return data
+}, {
+    watch: [user],
+    default: () => null,
 })
 
 watch(profile, (newProfile) => {
@@ -37,6 +45,20 @@ watch(profile, (newProfile) => {
         if (newProfile.avatar) avatarUrl.value = newProfile.avatar
     }
 }, { immediate: true })
+
+function syncEmailFromUser() {
+    profileState.email = user.value?.email || ''
+}
+
+watch(user, () => {
+    if (!isMounted.value) return
+    syncEmailFromUser()
+})
+
+onMounted(() => {
+    isMounted.value = true
+    syncEmailFromUser()
+})
 
 
 async function onProfileSubmit(payload: FormSubmitEvent<ProfileSchema>) {

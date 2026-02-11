@@ -1,0 +1,10 @@
+<svg width="20" height="24" viewBox="10 8 20 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Pixel Card Outline (Black) -->
+  <path fill-rule="evenodd" clip-rule="evenodd" d="M10 8H30V32H10V8ZM12 10V30H28V10H12Z" fill="black"/>
+  
+  <!-- Heart Suit (Black) - Centered approx 20,20 - Smaller (7x6 pixels) -->
+  <!-- Shifted up by 2 pixels for better visual centering -->
+  <path fill-rule="evenodd" clip-rule="evenodd" d="
+    M17 16 H19 V17 H21 V16 H23 V17 H24 V20 H23 V21 H22 V22 H21 V23 H19 V22 H18 V21 H17 V20 H16 V17 H17 V16 Z
+  " fill="black"/>
+</svg>

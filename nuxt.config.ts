@@ -23,4 +23,11 @@ export default defineNuxtConfig({
     // Disable SSR for rooms to avoid hydration mismatches with real-time features
     "/rooms/**": { ssr: false },
   },
+  app: {
+    head: {
+      link: [
+        { rel: "icon", type: "image/svg+xml", href: "/logo-pixel-dark.svg" },
+      ],
+    },
+  },
 });
