@@ -36,16 +36,19 @@ export function useRoomVotes(
     async function selectCard(cardValue: string) {
         if (!isEnabled.value) return
         if (!isVoting.value || !activeStory.value || !user.value) return
+        const userId = user.value.sub
+        const previousVote = votes.value[userId]
+        const previousSelectedCard = selectedCard.value
 
         // Optimistic update — both selectedCard and votes map
         selectedCard.value = cardValue
-        votes.value = { ...votes.value, [user.value.sub]: cardValue }
+        votes.value = { ...votes.value, [userId]: cardValue }
 
         const { error } = await client.from('story_votes').upsert(
             {
                 room_id: roomId,
                 story_id: activeStory.value.id,
-                user_id: user.value.sub,
+                user_id: userId,
                 vote_value: cardValue,
             },
             { onConflict: 'story_id,user_id' },
@@ -53,10 +56,14 @@ export function useRoomVotes(
 
         if (error) {
             console.error('Error voting:', error)
-            // Rollback optimistic vote
-            const { [user.value!.sub]: _, ...rest } = votes.value
-            votes.value = rest
-            selectedCard.value = null
+            // Rollback optimistic vote to previous local state
+            if (previousVote === undefined) {
+                const { [userId]: _, ...rest } = votes.value
+                votes.value = rest
+            } else {
+                votes.value = { ...votes.value, [userId]: previousVote }
+            }
+            selectedCard.value = previousSelectedCard
             toast.add({ title: 'Vote failed', description: error.message, color: 'error' })
         }
     }
@@ -78,6 +85,12 @@ export function useRoomVotes(
         }
         if (newStatus === 'completed' && oldStatus !== 'completed') {
             clearVotes()
+        }
+        if (
+            oldStatus === 'voting' &&
+            !['voting', 'voted', 'completed'].includes(newStatus)
+        ) {
+            fetchVotes()
         }
     }
 

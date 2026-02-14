@@ -168,19 +168,39 @@ function openCreateRoomModal() {
 async function createRoom() {
     if (!newRoomName.value.trim() || !user.value) return;
 
-    const { error } = await client.from("rooms").insert({
-        name: newRoomName.value,
-        description: newRoomDescription.value,
-        created_by: user.value.sub,
-    });
+    const { data: room, error: roomError } = await client
+        .from("rooms")
+        .insert({
+            name: newRoomName.value,
+            description: newRoomDescription.value,
+            created_by: user.value.sub,
+        })
+        .select("id")
+        .single();
 
-    if (error) {
+    if (roomError || !room) {
         toast.add({
             title: "Error",
-            description: error.message,
+            description: roomError?.message ?? "Failed to create room",
             color: "error",
         });
         return;
+    }
+
+    const { error: participantError } = await client
+        .from("room_participants")
+        .insert({
+            room_id: room.id,
+            user_id: user.value.sub,
+            joined_at: new Date().toISOString(),
+        });
+
+    if (participantError) {
+        toast.add({
+            title: "Warning",
+            description: "Room created but failed to add you as participant",
+            color: "warning",
+        });
     }
 
     toast.add({

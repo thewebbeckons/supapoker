@@ -88,7 +88,10 @@ async function onProfileSubmit(payload: FormSubmitEvent<ProfileSchema>) {
         } else {
             const { error } = await supabase
                 .from('profile')
-                .insert(updates)
+                .insert({
+                    user_id: user.value.sub,
+                    ...updates,
+                })
 
             if (error) throw error
         }
