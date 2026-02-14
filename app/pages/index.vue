@@ -60,9 +60,42 @@ const features = [
     </UPageHero>
 
     <UPageSection>
+      <div class="flex justify-center">
+        <ClientOnly>
+          <UiSafariMockup
+            url="supapoker.com/rooms/abc123"
+            src="/mockup.png"
+            class="size-full"
+          />
+        </ClientOnly>
+      </div>
+    </UPageSection>
+
+    <UPageSection>
       <UPageGrid>
         <UPageFeature v-for="feature in features" :key="feature.title" v-bind="feature" />
       </UPageGrid>
+    </UPageSection>
+
+    <UPageSection class="text-center border-3 border-blue-600">
+      <div class="max-w-2xl mx-auto">
+        <h2 class="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
+          Ready to plan better?
+        </h2>
+        <p class="text-lg text-neutral-600 dark:text-neutral-400 mb-8">
+          Create a room in seconds and start estimating with your team. No credit card required.
+        </p>
+        <div class="flex justify-center gap-4">
+          <UButton
+            to="/signup"
+            size="xl"
+            color="primary"
+            icon="i-lucide-rocket"
+          >
+            Get Started Free
+          </UButton>
+        </div>
+      </div>
     </UPageSection>
   </div>
 </template>

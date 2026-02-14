@@ -5,21 +5,35 @@
  * This uses the normal signup flow so the profile trigger fires correctly
  * 
  * Usage: node scripts/seed-user.mjs
+ * Required env vars:
+ *   - SEED_USER_EMAIL
+ *   - SEED_USER_PASSWORD
+ * Optional env vars:
+ *   - SEED_USER_NAME
  */
 
-const SUPABASE_URL = process.env.NUXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
-const SUPABASE_ANON_KEY = process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
+const SUPABASE_URL =
+  process.env.NUXT_PUBLIC_SUPABASE_URL ||
+  process.env.SUPABASE_URL ||
+  'http://127.0.0.1:54321';
+const SUPABASE_ANON_KEY =
+  process.env.NUXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.SUPABASE_KEY;
 
-const TEST_USER = {
-  email: 'jesse@thewebbeckons.ca',
-  password: 'SupapokerBest%1234',
-  name: 'Jesse'
-};
+const TEST_USER_EMAIL = process.env.SEED_USER_EMAIL;
+const TEST_USER_PASSWORD = process.env.SEED_USER_PASSWORD;
+const TEST_USER_NAME = process.env.SEED_USER_NAME || 'Test User';
+
+if (!TEST_USER_EMAIL || !TEST_USER_PASSWORD) {
+  console.error('❌ Missing seed user credentials.');
+  console.error('Set SEED_USER_EMAIL and SEED_USER_PASSWORD before running db:seed.');
+  process.exit(1);
+}
 
 async function seedUser() {
   console.log('🌱 Seeding test user...');
   console.log(`   URL: ${SUPABASE_URL}`);
-  console.log(`   Email: ${TEST_USER.email}`);
+  console.log(`   Email: ${TEST_USER_EMAIL}`);
 
   try {
     const response = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
@@ -29,10 +43,10 @@ async function seedUser() {
         'apikey': SUPABASE_ANON_KEY,
       },
       body: JSON.stringify({
-        email: TEST_USER.email,
-        password: TEST_USER.password,
+        email: TEST_USER_EMAIL,
+        password: TEST_USER_PASSWORD,
         data: {
-          name: TEST_USER.name
+          name: TEST_USER_NAME
         }
       })
     });
@@ -50,7 +64,7 @@ async function seedUser() {
     console.log('✅ Test user created successfully!');
     console.log(`   User ID: ${data.user?.id || data.id}`);
     console.log(`   Email: ${data.user?.email || data.email}`);
-    console.log('   Password: SupapokerBest%1234');
+    console.log('   Password: [from SEED_USER_PASSWORD]');
   } catch (error) {
     console.error('❌ Failed to create user:', error.message);
     process.exit(1);

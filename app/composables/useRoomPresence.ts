@@ -3,7 +3,7 @@ import type { Player } from '~/types/room'
 
 export function useRoomPresence(
     roomId: string,
-    roomCreatorId: ComputedRef<string | null | undefined>,
+    roomCreatorId: ComputedRef<string | null | undefined> | Ref<string | null | undefined>,
     isEnabled: Ref<boolean> = ref(true),
 ) {
     const client = useSupabaseClient<Database>()

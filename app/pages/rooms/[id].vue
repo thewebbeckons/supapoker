@@ -36,26 +36,37 @@ const inviteRoomDescription = computed(() =>
 );
 
 const {
-    data: isParticipant,
+    data: membershipData,
     status: participantStatus,
 } = await useAsyncData(
-    `room-participant-${roomId}`,
+    `room-membership-${roomId}`,
     async () => {
-        if (!user.value) return false;
+        if (!user.value) return { isParticipant: false, roomCreatorId: null };
 
-        const { data, error } = await client
+        const { data: participant } = await client
             .from("room_participants")
             .select("room_id")
             .eq("room_id", roomId)
             .eq("user_id", user.value.sub)
             .maybeSingle();
 
-        if (error) {
-            console.error("Failed to check room membership:", error);
-            return false;
+        if (participant) {
+            const { data: room } = await client
+                .from("rooms")
+                .select("created_by")
+                .eq("id", roomId)
+                .maybeSingle();
+            return { isParticipant: true, roomCreatorId: room?.created_by ?? null };
         }
 
-        return Boolean(data);
+        const { data: room } = await client
+            .from("rooms")
+            .select("created_by")
+            .eq("id", roomId)
+            .maybeSingle();
+
+        const isCreator = room?.created_by === user.value.sub;
+        return { isParticipant: isCreator, roomCreatorId: room?.created_by ?? null };
     },
     {
         watch: [user],
@@ -63,12 +74,12 @@ const {
 );
 
 watch(
-    [participantStatus, isParticipant],
-    ([status, participant]) => {
-        if (status !== "success") return;
+    [participantStatus, membershipData, user],
+    ([status, membership, currentUser]) => {
+        if (status !== "success" || !currentUser || !membership) return;
 
-        hasJoinedRoom.value = Boolean(participant);
-        isJoinModalOpen.value = !hasJoinedRoom.value;
+        hasJoinedRoom.value = membership.isParticipant;
+        isJoinModalOpen.value = !membership.isParticipant;
     },
     { immediate: true },
 );
@@ -165,7 +176,7 @@ const canEdit = computed(() => {
     );
 });
 
-const roomCreatorId = computed(() => room.value?.created_by);
+const currentRoomCreatorId = computed(() => room.value?.created_by);
 
 // Composables
 const {
@@ -192,7 +203,7 @@ const { votes, selectedCard, selectCard } = useRoomVotes(
 
 const { players, pokeUsers } = useRoomPresence(
     roomId,
-    roomCreatorId,
+    currentRoomCreatorId,
     hasJoinedRoom,
 );
 
@@ -382,12 +393,12 @@ function onViewVotes(story: any) {
                         <h1
                             class="text-2xl font-semibold text-neutral-700 dark:text-neutral-200"
                         >
-                            {{ room.name }}
+                            {{ room?.name }}
                         </h1>
                         <p
                             class="text-sm text-neutral-500 dark:text-neutral-400"
                         >
-                            {{ room.description }}
+                            {{ room?.description }}
                         </p>
                     </div>
                     <!-- Room Actions/Edit -->
@@ -496,25 +507,25 @@ function onViewVotes(story: any) {
                 :active-story="activeStory"
                 :is-voted="isVoted"
                 :votes="votes"
-                :room="room"
+                :room="room ?? null"
             />
         </div>
 
         <!-- Edit Room Modal -->
         <RoomEditModal
             v-model="isEditModalOpen"
-            :room="room"
+            :room="room ?? null"
             @success="refresh"
         />
 
         <!-- New Story Modal -->
         <RoomNewStoryModal
             v-model="isNewStoryModalOpen"
-            :room="room"
+            :room="room ?? null"
         />
 
         <!-- Delete Room Modal -->
-        <RoomDeleteModal v-model="isDeleteModalOpen" :room="room" />
+        <RoomDeleteModal v-model="isDeleteModalOpen" :room="room ?? null" />
 
         <!-- Story Edit/Delete Modals -->
         <RoomStoryEditModal
@@ -531,7 +542,7 @@ function onViewVotes(story: any) {
         <!-- Story Complete Confirmation Modal -->
         <RoomStoryCompleteModal
             v-model="isStoryCompleteModalOpen"
-            :story="activeStory"
+            :story="activeStory ?? null"
             @confirm="completeStory"
         />
 

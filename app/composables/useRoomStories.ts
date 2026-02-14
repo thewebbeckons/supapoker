@@ -67,25 +67,56 @@ export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(tru
         const oldStatus = activeStory.value.status
         const newUpdatedAt = new Date().toISOString()
 
-        // Clear existing votes
-        await client.from('story_votes').delete().eq('story_id', storyId)
-
-        const { error } = await client
+        const { error: statusError } = await client
             .from('stories')
             .update({ status: 'voting', updated_at: newUpdatedAt })
             .eq('id', storyId)
 
-        if (error) {
-            toast.add({ title: 'Error starting vote', description: error.message, color: 'error' })
-        } else {
-            // Optimistic update
-            stories.value = stories.value.map(s =>
-                s.id === storyId ? { ...s, status: 'voting', updated_at: newUpdatedAt } : s
-            )
-            // Notify votes composable so it clears votes for the creator
-            if (onStoryStatusChange.value) {
-                onStoryStatusChange.value(oldStatus, 'voting')
+        if (statusError) {
+            toast.add({ title: 'Error starting vote', description: statusError.message, color: 'error' })
+            return
+        }
+
+        const { error: clearVotesError } = await client
+            .from('story_votes')
+            .delete()
+            .eq('story_id', storyId)
+
+        if (clearVotesError) {
+            const { error: rollbackError } = await client
+                .from('stories')
+                .update({ status: oldStatus })
+                .eq('id', storyId)
+
+            if (rollbackError) {
+                toast.add({
+                    title: 'Error starting vote',
+                    description: `${clearVotesError.message}. Rollback failed: ${rollbackError.message}`,
+                    color: 'error',
+                })
+                await fetchStories()
+                return
             }
+
+            await fetchStories()
+            if (onStoryStatusChange.value) {
+                onStoryStatusChange.value('voting', oldStatus)
+            }
+            toast.add({
+                title: 'Error starting vote',
+                description: 'Could not clear previous votes. Please try again.',
+                color: 'error',
+            })
+            return
+        }
+
+        // Optimistic update
+        stories.value = stories.value.map(s =>
+            s.id === storyId ? { ...s, status: 'voting', updated_at: newUpdatedAt } : s
+        )
+        // Notify votes composable so it clears votes for the creator
+        if (onStoryStatusChange.value) {
+            onStoryStatusChange.value(oldStatus, 'voting')
         }
     }
 
