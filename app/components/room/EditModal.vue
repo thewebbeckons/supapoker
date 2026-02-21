@@ -107,9 +107,12 @@ async function transferAdmin() {
     isTransferring.value = false
 
     if (transferError) {
+        const isAnonymousTransferBlocked = transferError.code === '42501'
         toast.add({
             title: 'Error',
-            description: transferError.message,
+            description: isAnonymousTransferBlocked
+                ? 'Guest users must finish signup before they can become room admin.'
+                : transferError.message,
             color: 'error',
         })
         return

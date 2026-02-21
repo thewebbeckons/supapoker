@@ -21,6 +21,13 @@ const isCreateRoomModalOpen = ref(false);
 const newRoomName = ref("");
 const newRoomDescription = ref("");
 
+const isAnonymousUser = computed(() => {
+    if (!user.value) return false;
+
+    if (user.value.is_anonymous === true) return true;
+    return user.value.app_metadata?.provider === "anonymous";
+});
+
 // View mode: 'card' or 'list'
 const viewMode = useCookie<"card" | "list">("rooms-view-mode", {
     default: () => "card",
@@ -160,6 +167,16 @@ onUnmounted(() => {
 });
 
 function openCreateRoomModal() {
+    if (isAnonymousUser.value) {
+        toast.add({
+            title: "Sign up required",
+            description:
+                "Guest users can join rooms, but only signed-up accounts can create and manage rooms.",
+            color: "warning",
+        });
+        return;
+    }
+
     newRoomName.value = "";
     newRoomDescription.value = "";
     isCreateRoomModalOpen.value = true;
@@ -233,6 +250,7 @@ async function createRoom() {
                     label="Create Room"
                     icon="i-lucide-plus"
                     color="primary"
+                    :disabled="isAnonymousUser"
                     @click="openCreateRoomModal"
                 />
             </div>
@@ -253,6 +271,13 @@ async function createRoom() {
                     />
             </div>
         </div>
+
+        <p
+            v-if="isAnonymousUser"
+            class="text-sm text-warning-600 dark:text-warning-300"
+        >
+            Guest users can join rooms, but only signed-up accounts can create rooms or become room admins.
+        </p>
 
         <!-- Card View -->
         <div
