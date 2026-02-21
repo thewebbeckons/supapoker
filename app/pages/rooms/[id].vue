@@ -207,6 +207,17 @@ const { players, pokeUsers } = useRoomPresence(
     hasJoinedRoom,
 );
 
+const transferCandidates = computed(() =>
+    players.value
+        .filter((player) => player.id !== currentRoomCreatorId.value)
+        .map((player) => ({
+            id: player.id,
+            name: player.name,
+            avatar: player.avatar,
+            isOnline: player.isOnline,
+        })),
+);
+
 let roomChannel: ReturnType<typeof client.channel> | null = null;
 
 function cleanupRoomChannel() {
@@ -515,6 +526,7 @@ function onViewVotes(story: any) {
         <RoomEditModal
             v-model="isEditModalOpen"
             :room="room ?? null"
+            :transfer-candidates="transferCandidates"
             @success="refresh"
         />
 
