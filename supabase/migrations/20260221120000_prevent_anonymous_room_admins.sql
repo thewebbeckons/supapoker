@@ -11,7 +11,7 @@ AS $$
     SELECT 1
     FROM auth.users u
     WHERE u.id = target_user_id
-      AND COALESCE((to_jsonb(u) ->> 'is_anonymous')::boolean, false) = false
+      AND u.is_anonymous IS FALSE
       AND COALESCE(u.raw_app_meta_data ->> 'provider', '') <> 'anonymous'
   );
 $$;
