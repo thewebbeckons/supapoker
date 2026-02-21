@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { Database } from "~/types/database.types";
+import type { TransferCandidate } from "~/types/room";
 
 const route = useRoute();
 
@@ -23,12 +24,7 @@ const guestDisplayName = ref("");
 const isPreparingAnonymousSession = ref(false);
 const hasAttemptedAnonymousSession = ref(false);
 
-const isAnonymousUser = computed(() => {
-    if (!user.value) return false;
-
-    if (user.value.is_anonymous === true) return true;
-    return user.value.app_metadata?.provider === "anonymous";
-});
+const isAnonymousUser = useIsAnonymousUser(user);
 
 async function ensureAnonymousSession() {
     if (
@@ -305,7 +301,7 @@ const { players, pokeUsers } = useRoomPresence(
     hasJoinedRoom,
 );
 
-const transferCandidates = computed(() =>
+const transferCandidates = computed<TransferCandidate[]>(() =>
     players.value
         .filter((player) => player.id !== currentRoomCreatorId.value)
         .map((player) => ({

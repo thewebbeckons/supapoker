@@ -1,12 +1,6 @@
 <script lang="ts" setup>
 import type { Database } from '~/types/database.types'
-
-interface TransferCandidate {
-    id: string
-    name: string
-    avatar: string
-    isOnline: boolean
-}
+import type { TransferCandidate } from '~/types/room'
 
 const props = defineProps<{
     modelValue: boolean
@@ -93,38 +87,40 @@ function cancelTransferConfirmation() {
 }
 
 async function transferAdmin() {
-    if (!props.room || !selectedTransferTarget.value) return
+    if (isTransferring.value || !props.room || !selectedTransferTarget.value) return
 
     isTransferring.value = true
-    const { error: transferError } = await client
-        .from('rooms')
-        .update({
-            created_by: selectedTransferTarget.value.id,
-            updated_at: new Date().toISOString(),
-        })
-        .eq('id', props.room.id)
+    try {
+        const { error: transferError } = await client
+            .from('rooms')
+            .update({
+                created_by: selectedTransferTarget.value.id,
+                updated_at: new Date().toISOString(),
+            })
+            .eq('id', props.room.id)
 
-    isTransferring.value = false
+        if (transferError) {
+            const isAnonymousTransferBlocked = transferError.code === '42501'
+            toast.add({
+                title: 'Error',
+                description: isAnonymousTransferBlocked
+                    ? 'Guest users must finish signup before they can become room admin.'
+                    : transferError.message,
+                color: 'error',
+            })
+            return
+        }
 
-    if (transferError) {
-        const isAnonymousTransferBlocked = transferError.code === '42501'
         toast.add({
-            title: 'Error',
-            description: isAnonymousTransferBlocked
-                ? 'Guest users must finish signup before they can become room admin.'
-                : transferError.message,
-            color: 'error',
+            title: 'Admin transferred',
+            description: `${selectedTransferTarget.value.name} is now the room admin.`,
+            color: 'success',
         })
-        return
+        emit('success')
+        isOpen.value = false
+    } finally {
+        isTransferring.value = false
     }
-
-    toast.add({
-        title: 'Admin transferred',
-        description: `${selectedTransferTarget.value.name} is now the room admin.`,
-        color: 'success',
-    })
-    emit('success')
-    isOpen.value = false
 }
 
 async function updateRoom() {
@@ -271,7 +267,7 @@ async function updateRoom() {
                                 <UButton
                                     label="Confirm Transfer"
                                     color="error"
-                                    :disabled="!selectedTransferTarget || isUpdating"
+                                    :disabled="!selectedTransferTarget || isUpdating || isTransferring"
                                     :loading="isTransferring"
                                     @click="transferAdmin"
                                 />

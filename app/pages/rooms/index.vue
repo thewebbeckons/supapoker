@@ -21,12 +21,7 @@ const isCreateRoomModalOpen = ref(false);
 const newRoomName = ref("");
 const newRoomDescription = ref("");
 
-const isAnonymousUser = computed(() => {
-    if (!user.value) return false;
-
-    if (user.value.is_anonymous === true) return true;
-    return user.value.app_metadata?.provider === "anonymous";
-});
+const isAnonymousUser = useIsAnonymousUser(user);
 
 // View mode: 'card' or 'list'
 const viewMode = useCookie<"card" | "list">("rooms-view-mode", {
