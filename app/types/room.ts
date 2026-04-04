@@ -16,3 +16,10 @@ export interface Player {
     isModerator: boolean
     isOnline: boolean
 }
+
+export interface TransferCandidate {
+    id: string
+    name: string
+    avatar: string
+    isOnline: boolean
+}

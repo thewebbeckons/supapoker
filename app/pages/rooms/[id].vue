@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import type { Database } from "~/types/database.types";
+import type { TransferCandidate } from "~/types/room";
 
 const route = useRoute();
 
@@ -19,6 +20,52 @@ const selectedStory = ref<any>(null);
 const isJoinModalOpen = ref(false);
 const isJoiningRoom = ref(false);
 const hasJoinedRoom = ref(false);
+const guestDisplayName = ref("");
+const isPreparingAnonymousSession = ref(false);
+const hasAttemptedAnonymousSession = ref(false);
+
+const isAnonymousUser = useIsAnonymousUser(user);
+
+async function ensureAnonymousSession() {
+    if (
+        user.value ||
+        isPreparingAnonymousSession.value ||
+        hasAttemptedAnonymousSession.value
+    ) {
+        return;
+    }
+
+    hasAttemptedAnonymousSession.value = true;
+    isPreparingAnonymousSession.value = true;
+
+    try {
+        const { error } = await client.auth.signInAnonymously();
+        if (error) throw error;
+    } catch (error: any) {
+        toast.add({
+            title: "Unable to start guest session",
+            description: error?.message ?? "Please sign in to continue.",
+            color: "error",
+        });
+        await navigateTo({
+            path: "/login",
+            query: {
+                redirectTo: route.fullPath,
+            },
+        });
+    } finally {
+        isPreparingAnonymousSession.value = false;
+    }
+}
+
+watch(
+    user,
+    (currentUser) => {
+        if (currentUser) return;
+        void ensureAnonymousSession();
+    },
+    { immediate: true },
+);
 
 function getInviteQueryValue(
     key: "roomName" | "roomDescription",
@@ -87,15 +134,49 @@ watch(
 async function joinRoom() {
     if (!user.value || isJoiningRoom.value) return;
 
+    const userId = user.value.sub;
+    const trimmedGuestName = guestDisplayName.value.trim();
+
+    if (isAnonymousUser.value && trimmedGuestName.length < 2) {
+        toast.add({
+            title: "Name required",
+            description: "Please enter your name before joining this room.",
+            color: "warning",
+        });
+        return;
+    }
+
     isJoiningRoom.value = true;
 
     try {
+        if (isAnonymousUser.value) {
+            const { error: profileError } = await client
+                .from("profile")
+                .upsert(
+                    {
+                        user_id: userId,
+                        name: trimmedGuestName,
+                        updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: "user_id" },
+                );
+
+            if (profileError) {
+                toast.add({
+                    title: "Unable to save your name",
+                    description: profileError.message,
+                    color: "error",
+                });
+                return;
+            }
+        }
+
         const { error } = await client
             .from("room_participants")
             .upsert(
                 {
                     room_id: roomId,
-                    user_id: user.value.sub,
+                    user_id: userId,
                     joined_at: new Date().toISOString(),
                 },
                 { onConflict: "room_id,user_id" },
@@ -152,11 +233,24 @@ const joinModalDescription = computed(() => {
 });
 
 const isRoomLoading = computed(() => {
+    if (!user.value) {
+        return (
+            isPreparingAnonymousSession.value ||
+            !hasAttemptedAnonymousSession.value
+        );
+    }
+
     return (
         participantStatus.value === "pending" ||
         (hasJoinedRoom.value &&
             (roomStatus.value === "idle" || roomStatus.value === "pending"))
     );
+});
+
+const canJoinRoom = computed(() => {
+    if (isJoiningRoom.value) return false;
+    if (!isAnonymousUser.value) return true;
+    return guestDisplayName.value.trim().length >= 2;
 });
 
 const showRoomError = computed(() => {
@@ -205,6 +299,17 @@ const { players, pokeUsers } = useRoomPresence(
     roomId,
     currentRoomCreatorId,
     hasJoinedRoom,
+);
+
+const transferCandidates = computed<TransferCandidate[]>(() =>
+    players.value
+        .filter((player) => player.id !== currentRoomCreatorId.value)
+        .map((player) => ({
+            id: player.id,
+            name: player.name,
+            avatar: player.avatar,
+            isOnline: player.isOnline,
+        })),
 );
 
 let roomChannel: ReturnType<typeof client.channel> | null = null;
@@ -270,16 +375,45 @@ onUnmounted(() => {
     cleanupRoomChannel();
 });
 
-// Fetch current user profile
-const { data: userProfile } = await useAsyncData("user-profile", async () => {
-    if (!user.value) return null;
-    const { data } = await client
-        .from("profile")
-        .select("name, avatar")
-        .eq("user_id", user.value.sub)
-        .single();
-    return data;
+const userProfileAsyncDataKey = computed(() => {
+    return user.value?.sub
+        ? `room-user-profile:${user.value.sub}`
+        : "room-user-profile:anonymous";
 });
+
+// Fetch current user profile
+const { data: userProfile } = await useAsyncData(
+    userProfileAsyncDataKey,
+    async () => {
+        if (!user.value) return null;
+        const { data } = await client
+            .from("profile")
+            .select("name, avatar")
+            .eq("user_id", user.value.sub)
+            .maybeSingle();
+        return data;
+    },
+    {
+        watch: [user],
+        default: () => null,
+    },
+);
+
+watch(
+    [isAnonymousUser, userProfile],
+    ([anonymous, profile]) => {
+        if (!anonymous) {
+            guestDisplayName.value = "";
+            return;
+        }
+
+        if (guestDisplayName.value.trim().length > 0) return;
+        if (profile?.name) {
+            guestDisplayName.value = profile.name;
+        }
+    },
+    { immediate: true },
+);
 
 // Modal handlers
 function openEditModal(): void {
@@ -363,6 +497,20 @@ function onViewVotes(story: any) {
                         </p>
                     </div>
 
+                    <UFormField
+                        v-if="isAnonymousUser"
+                        label="Your name"
+                        description="Guest users must set a display name before joining."
+                        required
+                    >
+                        <UInput
+                            v-model="guestDisplayName"
+                            placeholder="Enter your name"
+                            maxlength="60"
+                            @keydown.enter="joinRoom"
+                        />
+                    </UFormField>
+
                     <div class="flex justify-end gap-2">
                         <UButton
                             to="/rooms"
@@ -373,6 +521,7 @@ function onViewVotes(story: any) {
                         <UButton
                             color="primary"
                             :loading="isJoiningRoom"
+                            :disabled="!canJoinRoom"
                             label="Join room"
                             @click="joinRoom"
                         />
@@ -515,6 +664,7 @@ function onViewVotes(story: any) {
         <RoomEditModal
             v-model="isEditModalOpen"
             :room="room ?? null"
+            :transfer-candidates="transferCandidates"
             @success="refresh"
         />
 
