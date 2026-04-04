@@ -56,25 +56,6 @@ export function useRoomPresence(
         })
     }
 
-    // Fetch a single user's profile when they appear in presence but not in players
-    async function fetchSingleProfile(userId: string) {
-        const { data } = await client
-            .from('profile')
-            .select('user_id, name, avatar')
-            .eq('user_id', userId)
-            .single()
-
-        const newPlayer: Player = {
-            id: userId,
-            name: data?.name || 'Anonymous',
-            avatar: data?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
-            isModerator: userId === roomCreatorId.value,
-            isOnline: true,
-        }
-
-        players.value = [...players.value, newPlayer]
-    }
-
     function playPokeSound() {
         void playPokeSoundIfEnabled()
     }
@@ -94,6 +75,7 @@ export function useRoomPresence(
 
         presenceChannel = client.channel(`room:${roomId}`, {
             config: {
+                private: true,
                 presence: {
                     key: user.value?.sub,
                 },
@@ -106,19 +88,11 @@ export function useRoomPresence(
                 const onlineIds = Object.keys(newState)
                 onlineUsers.value = new Set(onlineIds)
 
-                // Update isOnline on existing players (0 DB queries)
+                // Presence only toggles known participants. Unknown ids are ignored.
                 players.value = players.value.map(p => ({
                     ...p,
                     isOnline: onlineUsers.value.has(p.id),
                 }))
-
-                // Check for truly new users not yet in the players list
-                const knownIds = new Set(players.value.map(p => p.id))
-                for (const uid of onlineIds) {
-                    if (!knownIds.has(uid)) {
-                        fetchSingleProfile(uid)
-                    }
-                }
             })
             .on(
                 'postgres_changes',

@@ -5,6 +5,7 @@ import type { Database } from '~/types/database.types'
 
 const supabase = useSupabaseClient<Database>()
 const user = useSupabaseUser()
+const isAnonymousUser = useIsAnonymousUser(user)
 const toast = useToast()
 const isMounted = ref(false)
 
@@ -146,10 +147,17 @@ async function onAvatarUpdate(url: string | null) {
             </UFormField>
             <USeparator />
             <!-- Avatar Row -->
-            <UFormField name="avatar" label="Avatar" description="JPG, GIF or PNG. 1MB Max." required
+            <UFormField name="avatar" label="Avatar" description="JPG, GIF or PNG. 1MB Max."
                 class="flex max-sm:flex-col justify-between sm:items-center gap-4">
-                <AccountAvatarUpload :model-value="avatarUrl" @update:model-value="onAvatarUpdate"
-                    :name="profileState.name" />
+                <template v-if="!isAnonymousUser">
+                    <AccountAvatarUpload :model-value="avatarUrl" @update:model-value="onAvatarUpdate"
+                        :name="profileState.name" />
+                </template>
+                <template v-else>
+                    <div class="max-w-sm rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-sm text-warning-800 dark:border-warning-900 dark:bg-warning-950/40 dark:text-warning-200">
+                        Sign up to upload a custom avatar. Guest accounts can still update their display name here.
+                    </div>
+                </template>
             </UFormField>
             <div class="flex justify-end pt-4">
                 <UButton type="submit" label="Save changes" color="neutral" variant="solid" />

@@ -21,11 +21,21 @@ const passwordState = reactive<PasswordSchema>({
 const { passwordStrength, strengthScore, strengthColor } = usePasswordStrength(toRef(passwordState, 'password'))
 
 const user = useSupabaseUser()
+const isAnonymousUser = useIsAnonymousUser(user)
 
 async function onPasswordSubmit(payload: FormSubmitEvent<PasswordSchema>) {
     try {
+        if (!user.value?.email || isAnonymousUser.value) {
+            toast.add({
+                title: 'Sign up required',
+                description: 'Guest accounts cannot manage passwords.',
+                color: 'warning',
+            })
+            return
+        }
+
         const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: user.value!.email!,
+            email: user.value.email,
             password: payload.data.currentPassword,
         })
 
