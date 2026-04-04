@@ -95,7 +95,7 @@ export type Database = {
       rooms: {
         Row: {
           created_at: string
-          created_by: string | null
+          created_by: string
           current_story_card: string | null
           description: string | null
           id: string
@@ -104,7 +104,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by?: string | null
+          created_by: string
           current_story_card?: string | null
           description?: string | null
           id?: string
@@ -113,7 +113,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string | null
+          created_by?: string
           current_story_card?: string | null
           description?: string | null
           id?: string
@@ -208,6 +208,10 @@ export type Database = {
     }
     Functions: {
       get_user_room_ids: { Args: never; Returns: string[] }
+      start_story_vote: {
+        Args: { p_room_id: string; p_story_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

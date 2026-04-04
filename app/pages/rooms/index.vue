@@ -110,7 +110,11 @@ function cleanupRoomsChannel() {
 function setupRoomsChannel() {
     if (!user.value || roomsChannel) return;
 
-    roomsChannel = client.channel(`rooms-list:${user.value.sub}`);
+    roomsChannel = client.channel(`rooms-list:${user.value.sub}`, {
+        config: {
+            private: true,
+        },
+    });
     roomsChannel
         .on(
             "postgres_changes",
