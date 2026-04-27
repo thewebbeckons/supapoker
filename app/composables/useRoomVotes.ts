@@ -123,7 +123,11 @@ export function useRoomVotes(
     function setupChannel() {
         if (!isEnabled.value || votesChannel) return
 
-        votesChannel = client.channel(`room-votes:${roomId}`)
+        votesChannel = client.channel(`room-votes:${roomId}`, {
+            config: {
+                private: true,
+            },
+        })
         votesChannel
             .on(
                 'postgres_changes',
