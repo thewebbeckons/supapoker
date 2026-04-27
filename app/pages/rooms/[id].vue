@@ -324,7 +324,11 @@ function cleanupRoomChannel() {
 function setupRoomChannel() {
     if (!hasJoinedRoom.value || roomChannel) return;
 
-    roomChannel = client.channel(`room-meta:${roomId}`);
+    roomChannel = client.channel(`room-meta:${roomId}`, {
+        config: {
+            private: true,
+        },
+    });
     roomChannel
         .on(
             "postgres_changes",
