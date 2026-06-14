@@ -29,24 +29,14 @@ A real-time Planning Poker application built with Nuxt 4, Supabase, and Nuxt UI.
 Create a `.env` file in the root directory:
 
 ```bash
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_KEY=your_supabase_anon_key
+NUXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NUXT_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
 ```
 
 ### Installation
 
 ```bash
-# npm
-npm install
-
-# pnpm
 pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
 ## Supabase (Local Development)
@@ -81,7 +71,7 @@ Useful local URLs:
 
 ```bash
 # Create a test user (requires SEED_USER_EMAIL and SEED_USER_PASSWORD in .env)
-node scripts/seed-user.mjs
+pnpm db:seed
 ```
 
 ## Development
@@ -89,17 +79,7 @@ node scripts/seed-user.mjs
 Start the development server on `http://localhost:3000`:
 
 ```bash
-# npm
-npm run dev
-
-# pnpm
 pnpm run dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
 ## Production
@@ -107,15 +87,27 @@ bun run dev
 Build the application for production:
 
 ```bash
-# npm
-npm run build
-
-# pnpm
 pnpm run build
-
-# yarn
-yarn build
-
-# bun
-bun run build
 ```
+
+## Cloudflare / NuxtHub Hosting
+
+NuxtHub is installed as the Cloudflare hosting layer only. Supabase remains the backend for auth, Postgres, realtime, and avatar storage. The NuxtHub storage features are disabled in `nuxt.config.ts`, so no D1, KV, R2, or cache resources are required yet.
+
+Cloudflare Workers needs these variables set for production and preview environments:
+
+```bash
+NUXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NUXT_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
+```
+
+For local Workers preview, copy `.dev.vars.example` to `.dev.vars` and fill in the same values. Keep `.dev.vars` uncommitted.
+
+Useful commands:
+
+```bash
+pnpm run cf:preview
+pnpm run cf:deploy
+```
+
+When the production URL is known, add it to Supabase Auth redirect URLs so `/confirm` redirects are accepted.
