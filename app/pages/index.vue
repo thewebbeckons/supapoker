@@ -1,10 +1,10 @@
 <script setup lang="ts">
-const user = useSupabaseUser()
+const { user } = useCurrentUser()
 
 definePageMeta({
   middleware: [
     function (to, from) {
-      const user = useSupabaseUser()
+      const { user } = useCurrentUser()
       if (user.value) {
         return navigateTo('/rooms')
       }

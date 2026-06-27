@@ -1,17 +1,14 @@
 <script lang="ts" setup>
-const user = useSupabaseUser()
-const supabase = useSupabaseClient()
+const { loggedIn, signOut } = useCurrentUser()
 const isMounted = ref(false)
-
-const isAuthenticated = computed(() => Boolean(user.value))
 
 onMounted(() => {
     isMounted.value = true
 })
 
 async function logout() {
-    await supabase.auth.signOut()
-    navigateTo('/')
+    await signOut()
+    await navigateTo('/')
 }
 
 const items = [
@@ -39,13 +36,13 @@ const items = [
             </NuxtLink>
             <UBadge color="info" variant="subtle">Beta</UBadge>
         </template>
-        <UNavigationMenu v-if="isMounted && isAuthenticated" :items="items" />
+        <UNavigationMenu v-if="isMounted && loggedIn" :items="items" />
         <template #right>
             <div v-if="!isMounted" class="flex items-center gap-2">
                 <USkeleton class="h-9 w-24" />
                 <USkeleton class="h-9 w-24" />
             </div>
-            <div v-else-if="!isAuthenticated" class="flex items-center gap-2">
+            <div v-else-if="!loggedIn" class="flex items-center gap-2">
                 <UButton label="Login" to="/login" variant="outline" color="neutral" />
                 <UButton label="Sign up" to="/signup" color="primary" />
             </div>

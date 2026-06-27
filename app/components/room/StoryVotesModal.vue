@@ -1,10 +1,9 @@
 <script lang="ts" setup>
-import type { Database } from '~/types/database.types'
-
 const props = defineProps<{
     modelValue: boolean
     story: {
         id: string
+        room_id: string
         title: string
     } | null
 }>()
@@ -12,8 +11,6 @@ const props = defineProps<{
 const emit = defineEmits<{
     (e: 'update:modelValue', value: boolean): void
 }>()
-
-const client = useSupabaseClient<Database>()
 
 const isOpen = computed({
     get: () => props.modelValue,
@@ -26,18 +23,7 @@ const isLoading = ref(false)
 watch(() => props.story, async (story) => {
     if (!story) return
     isLoading.value = true
-    const { data } = await client
-        .from('story_votes')
-        .select('user_id, vote_value')
-        .eq('story_id', story.id)
-
-    const voteMap: Record<string, string> = {}
-    if (data) {
-        for (const row of data) {
-            voteMap[row.user_id] = row.vote_value
-        }
-    }
-    votes.value = voteMap
+    votes.value = await $fetch<Record<string, string>>(`/api/rooms/${story.room_id}/stories/${story.id}/votes`)
     isLoading.value = false
 })
 </script>

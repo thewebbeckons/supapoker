@@ -1,10 +1,9 @@
 <script lang="ts" setup>
-import type { Database } from '~/types/database.types'
-
 const props = defineProps<{
     modelValue: boolean
     story: {
         id: string
+        room_id: string
         title: string
     } | null
 }>()
@@ -14,7 +13,6 @@ const emit = defineEmits<{
     (e: 'success', payload: { id: string; title: string }): void
 }>()
 
-const client = useSupabaseClient<Database>()
 const toast = useToast()
 
 const titleInput = ref('')
@@ -36,18 +34,18 @@ async function updateStory() {
 
     isUpdating.value = true
 
-    const { error } = await client
-        .from('stories')
-        .update({ title: titleInput.value })
-        .eq('id', props.story.id)
-
-    isUpdating.value = false
-
-    if (error) {
-        toast.add({ title: 'Error', description: error.message, color: 'error' })
+    try {
+        await $fetch(`/api/rooms/${props.story.room_id}/stories/${props.story.id}`, {
+            method: 'PATCH',
+            body: { title: titleInput.value },
+        })
+    } catch (error: any) {
+        toast.add({ title: 'Error', description: error?.data?.message ?? error.message, color: 'error' })
+        isUpdating.value = false
         return
     }
 
+    isUpdating.value = false
     emit('success', { id: props.story!.id, title: titleInput.value })
     isOpen.value = false
     toast.add({ title: 'Success', description: 'Story updated.', color: 'success' })
