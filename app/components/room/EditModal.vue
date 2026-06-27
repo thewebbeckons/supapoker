@@ -1,5 +1,4 @@
 <script lang="ts" setup>
-import type { Database } from '~/types/database.types'
 import type { TransferCandidate } from '~/types/room'
 
 const props = defineProps<{
@@ -8,7 +7,7 @@ const props = defineProps<{
         id: string
         name: string
         description: string | null
-        created_by: string | null
+        adminUserId: string
     } | null
     transferCandidates: TransferCandidate[]
 }>()
@@ -18,7 +17,6 @@ const emit = defineEmits<{
     (e: 'success'): void
 }>()
 
-const client = useSupabaseClient<Database>()
 const toast = useToast()
 
 const editName = ref('')
@@ -91,25 +89,12 @@ async function transferAdmin() {
 
     isTransferring.value = true
     try {
-        const { error: transferError } = await client
-            .from('rooms')
-            .update({
-                created_by: selectedTransferTarget.value.id,
-                updated_at: new Date().toISOString(),
-            })
-            .eq('id', props.room.id)
-
-        if (transferError) {
-            const isAnonymousTransferBlocked = transferError.code === '42501'
-            toast.add({
-                title: 'Error',
-                description: isAnonymousTransferBlocked
-                    ? 'Guest users must finish signup before they can become room admin.'
-                    : transferError.message,
-                color: 'error',
-            })
-            return
-        }
+        await $fetch(`/api/rooms/${props.room.id}`, {
+            method: 'PATCH',
+            body: {
+                adminUserId: selectedTransferTarget.value.id,
+            },
+        })
 
         toast.add({
             title: 'Admin transferred',
@@ -127,22 +112,21 @@ async function updateRoom() {
     if (!editName.value.trim() || !props.room) return
 
     isUpdating.value = true
-    const { error: updateError } = await client
-        .from('rooms')
-        .update({
-            name: editName.value,
-            description: editDescription.value,
-            updated_at: new Date().toISOString(),
+    try {
+        await $fetch(`/api/rooms/${props.room.id}`, {
+            method: 'PATCH',
+            body: {
+                name: editName.value,
+                description: editDescription.value,
+            },
         })
-        .eq('id', props.room.id)
-
-    isUpdating.value = false
-
-    if (updateError) {
-        toast.add({ title: 'Error', description: updateError.message, color: 'error' })
+    } catch (error: any) {
+        toast.add({ title: 'Error', description: error?.data?.message ?? error.message, color: 'error' })
+        isUpdating.value = false
         return
     }
 
+    isUpdating.value = false
     toast.add({ title: 'Success', description: 'Room updated successfully', color: 'success' })
     emit('success')
     isOpen.value = false

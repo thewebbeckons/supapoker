@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import type { Database } from '~/types/database.types'
 import type { TabsItem } from '@nuxt/ui'
-
-type Story = Database['public']['Tables']['stories']['Row']
+import type { Story } from '~/types/room'
 
 const props = defineProps<{
     stories: Story[]

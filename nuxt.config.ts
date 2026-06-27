@@ -1,4 +1,8 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
+declare const process: {
+  env: Record<string, string | undefined>;
+};
+
 export default defineNuxtConfig({
   compatibilityDate: "2026-06-14",
   devtools: {
@@ -8,27 +12,30 @@ export default defineNuxtConfig({
     "@nuxt/ui",
     "@nuxthub/core",
     "@vueuse/nuxt",
-    "@nuxtjs/supabase",
     "@nuxt/hints",
   ],
   css: ["~/assets/css/main.css"],
   hub: {
-    // NuxtHub is currently used for Cloudflare hosting only.
-    db: false,
+    db: "sqlite",
     kv: false,
-    blob: false,
+    blob: true,
     cache: false,
   },
-  supabase: {
-    redirectOptions: {
-      login: "/login",
-      callback: "/confirm",
-      saveRedirectToCookie: true,
-      exclude: ["/signup", "/", "/forgot-password", "/privacy", "/rooms/*"],
+  runtimeConfig: {
+    betterAuthSecret: process.env.BETTER_AUTH_SECRET || "",
+    githubClientId: process.env.GITHUB_CLIENT_ID || "",
+    githubClientSecret: process.env.GITHUB_CLIENT_SECRET || "",
+    emailFrom: process.env.EMAIL_FROM || "SupaPoker <noreply@example.com>",
+    public: {
+      siteUrl: process.env.NUXT_PUBLIC_SITE_URL || "",
     },
   },
   nitro: {
     preset: "cloudflare_module",
+    entry: "./cloudflare-entry.ts",
+    experimental: {
+      websocket: true,
+    },
   },
   routeRules: {
     // Disable SSR for rooms to avoid hydration mismatches with real-time features

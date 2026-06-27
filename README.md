@@ -1,113 +1,58 @@
 # Supapoker
 
-A real-time Planning Poker application built with Nuxt 4, Supabase, and Nuxt UI.
+A real-time Planning Poker application built with Nuxt 4, Cloudflare, NuxtHub, Better Auth, and Nuxt UI.
 
 ## Features
 
-- **User Authentication**: Secure sign-up and login via Supabase Auth.
-- **Room Management**: Create and join rooms for planning sessions.
-- **Real-time Interaction**: (In Progress) Vote on stories and see results in real-time.
-- **Modern UI**: Clean and responsive data-driven interface using Nuxt UI.
-- **Dark Mode**: Fully supported out of the box.
-
-## Tech Stack
-
-- [Nuxt 4](https://nuxt.com)
-- [Supabase](https://supabase.com)
-- [Nuxt UI](https://ui.nuxt.com)
-- [VueUse](https://vueuse.org)
+- User authentication with Better Auth email/password and GitHub OAuth.
+- Room management for planning sessions.
+- Real-time room presence and voting powered by Cloudflare Durable Objects.
+- D1-backed rooms, profiles, story history, and vote snapshots through NuxtHub.
+- Avatar uploads stored in R2 through NuxtHub blob.
+- Transactional email through Cloudflare Email Service.
 
 ## Setup
-
-### Prerequisites
-
-- Node.js (Latest LTS recommended)
-- A Supabase project
-
-### Environment Variables
-
-Create a `.env` file in the root directory:
-
-```bash
-NUXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NUXT_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
-```
-
-### Installation
 
 ```bash
 pnpm install
 ```
 
-## Supabase (Local Development)
-
-The project uses [Supabase CLI](https://supabase.com/docs/guides/local-development) for local development.
+Create `.env` from `.env.example`:
 
 ```bash
-# Start local Supabase (DB, Auth, Storage, Realtime)
-supabase start
-
-# Reset database (runs all migrations + seeds)
-supabase db reset
-
-# Stop local Supabase
-supabase stop
-```
-
-On start/reset, the following are automatically provisioned:
-
-- **Database schema** — all tables, RLS policies, triggers via migrations in `supabase/migrations/`
-- **Avatars storage bucket** — public bucket for user profile images (configured in `config.toml` and via migration)
-- **Realtime publications** — for rooms, stories, and votes
-
-Useful local URLs:
-| Service | URL |
-|---|---|
-| Supabase Studio | http://localhost:54323 |
-| API | http://localhost:54321 |
-| Inbucket (email) | http://localhost:54324 |
-
-### Seed Users
-
-```bash
-# Create a test user (requires SEED_USER_EMAIL and SEED_USER_PASSWORD in .env)
-pnpm db:seed
+BETTER_AUTH_SECRET=your-secret-at-least-32-characters
+GITHUB_CLIENT_ID=your-github-oauth-client-id
+GITHUB_CLIENT_SECRET=your-github-oauth-client-secret
+NUXT_PUBLIC_SITE_URL=http://localhost:3000
+EMAIL_FROM=SupaPoker <noreply@your-domain.com>
 ```
 
 ## Development
-
-Start the development server on `http://localhost:3000`:
 
 ```bash
 pnpm run dev
 ```
 
-## Production
-
-Build the application for production:
+NuxtHub applies D1 migrations during dev/build. Generate migrations after schema changes:
 
 ```bash
-pnpm run build
+pnpm run db:generate
+pnpm run db:migrate
 ```
 
-## Cloudflare / NuxtHub Hosting
+## Cloudflare
 
-NuxtHub is installed as the Cloudflare hosting layer only. Supabase remains the backend for auth, Postgres, realtime, and avatar storage. The NuxtHub storage features are disabled in `nuxt.config.ts`, so no D1, KV, R2, or cache resources are required yet.
+The app uses these Cloudflare bindings:
 
-Cloudflare Workers needs these variables set for production and preview environments:
-
-```bash
-NUXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NUXT_PUBLIC_SUPABASE_KEY=your_supabase_anon_key
-```
-
-For local Workers preview, copy `.dev.vars.example` to `.dev.vars` and fill in the same values. Keep `.dev.vars` uncommitted.
+- D1 through NuxtHub `hub.db`
+- R2 through NuxtHub `hub.blob`
+- `ROOM_SESSION` Durable Object for room realtime state
+- `EMAIL` Cloudflare Email Service binding
 
 Useful commands:
 
 ```bash
+pnpm run build
 pnpm run cf:preview
 pnpm run cf:deploy
 ```
-
-When the production URL is known, add it to Supabase Auth redirect URLs so `/confirm` redirects are accepted.

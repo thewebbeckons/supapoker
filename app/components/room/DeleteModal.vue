@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import type { Database } from '~/types/database.types'
-
 const props = defineProps<{
     modelValue: boolean
     room: {
@@ -13,9 +11,7 @@ const emit = defineEmits<{
     (e: 'update:modelValue', value: boolean): void
 }>()
 
-const client = useSupabaseClient<Database>()
 const toast = useToast()
-const router = useRouter()
 const isDeleting = ref(false)
 
 const isOpen = computed({
@@ -27,13 +23,12 @@ async function executeDelete() {
     if (!props.room) return
     isDeleting.value = true
 
-    const { error } = await client
-        .from('rooms')
-        .delete()
-        .eq('id', props.room.id)
-
-    if (error) {
-        toast.add({ title: 'Error', description: error.message, color: 'error' })
+    try {
+        await $fetch(`/api/rooms/${props.room.id}`, {
+            method: 'DELETE',
+        })
+    } catch (error: any) {
+        toast.add({ title: 'Error', description: error?.data?.message ?? error.message, color: 'error' })
         isDeleting.value = false
         return
     }

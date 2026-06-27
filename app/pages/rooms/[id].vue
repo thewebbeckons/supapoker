@@ -1,12 +1,14 @@
 <script lang="ts" setup>
-import type { Database } from "~/types/database.types";
 import type { TransferCandidate } from "~/types/room";
+
+definePageMeta({
+    middleware: ["auth"],
+});
 
 const route = useRoute();
 
 const roomId = route.params.id as string;
-const client = useSupabaseClient<Database>();
-const user = useSupabaseUser();
+const { user } = useCurrentUser();
 const toast = useToast();
 
 const isEditModalOpen = ref(false);
@@ -19,53 +21,7 @@ const isStoryVotesModalOpen = ref(false);
 const selectedStory = ref<any>(null);
 const isJoinModalOpen = ref(false);
 const isJoiningRoom = ref(false);
-const hasJoinedRoom = ref(false);
-const guestDisplayName = ref("");
-const isPreparingAnonymousSession = ref(false);
-const hasAttemptedAnonymousSession = ref(false);
-
-const isAnonymousUser = useIsAnonymousUser(user);
-
-async function ensureAnonymousSession() {
-    if (
-        user.value ||
-        isPreparingAnonymousSession.value ||
-        hasAttemptedAnonymousSession.value
-    ) {
-        return;
-    }
-
-    hasAttemptedAnonymousSession.value = true;
-    isPreparingAnonymousSession.value = true;
-
-    try {
-        const { error } = await client.auth.signInAnonymously();
-        if (error) throw error;
-    } catch (error: any) {
-        toast.add({
-            title: "Unable to start guest session",
-            description: error?.message ?? "Please sign in to continue.",
-            color: "error",
-        });
-        await navigateTo({
-            path: "/login",
-            query: {
-                redirectTo: route.fullPath,
-            },
-        });
-    } finally {
-        isPreparingAnonymousSession.value = false;
-    }
-}
-
-watch(
-    user,
-    (currentUser) => {
-        if (currentUser) return;
-        void ensureAnonymousSession();
-    },
-    { immediate: true },
-);
+const pokeBurstKey = ref(0);
 
 function getInviteQueryValue(
     key: "roomName" | "roomDescription",
@@ -83,50 +39,30 @@ const inviteRoomDescription = computed(() =>
 );
 
 const {
-    data: membershipData,
-    status: participantStatus,
+    data: roomAccess,
+    status: roomStatus,
+    error: roomError,
+    refresh,
 } = await useAsyncData(
-    `room-membership-${roomId}`,
+    `room-access-${roomId}`,
     async () => {
-        if (!user.value) return { isParticipant: false, roomCreatorId: null };
-
-        const { data: participant } = await client
-            .from("room_participants")
-            .select("room_id")
-            .eq("room_id", roomId)
-            .eq("user_id", user.value.sub)
-            .maybeSingle();
-
-        if (participant) {
-            const { data: room } = await client
-                .from("rooms")
-                .select("created_by")
-                .eq("id", roomId)
-                .maybeSingle();
-            return { isParticipant: true, roomCreatorId: room?.created_by ?? null };
-        }
-
-        const { data: room } = await client
-            .from("rooms")
-            .select("created_by")
-            .eq("id", roomId)
-            .maybeSingle();
-
-        const isCreator = room?.created_by === user.value.sub;
-        return { isParticipant: isCreator, roomCreatorId: room?.created_by ?? null };
+        if (!user.value) return null;
+        return $fetch<{ room: any; isParticipant: boolean }>(`/api/rooms/${roomId}`);
     },
     {
         watch: [user],
     },
 );
 
-watch(
-    [participantStatus, membershipData, user],
-    ([status, membership, currentUser]) => {
-        if (status !== "success" || !currentUser || !membership) return;
+const hasJoinedRoom = computed(() => Boolean(roomAccess.value?.isParticipant));
+const room = computed(() => roomAccess.value?.room ?? null);
 
-        hasJoinedRoom.value = membership.isParticipant;
-        isJoinModalOpen.value = !membership.isParticipant;
+watch(
+    [roomStatus, roomAccess, user],
+    ([status, access, currentUser]) => {
+        if (status !== "success" || !currentUser || !access) return;
+
+        isJoinModalOpen.value = !access.isParticipant;
     },
     { immediate: true },
 );
@@ -134,123 +70,43 @@ watch(
 async function joinRoom() {
     if (!user.value || isJoiningRoom.value) return;
 
-    const userId = user.value.sub;
-    const trimmedGuestName = guestDisplayName.value.trim();
-
-    if (isAnonymousUser.value && trimmedGuestName.length < 2) {
-        toast.add({
-            title: "Name required",
-            description: "Please enter your name before joining this room.",
-            color: "warning",
-        });
-        return;
-    }
-
     isJoiningRoom.value = true;
 
     try {
-        if (isAnonymousUser.value) {
-            const { error: profileError } = await client
-                .from("profile")
-                .upsert(
-                    {
-                        user_id: userId,
-                        name: trimmedGuestName,
-                        updated_at: new Date().toISOString(),
-                    },
-                    { onConflict: "user_id" },
-                );
-
-            if (profileError) {
-                toast.add({
-                    title: "Unable to save your name",
-                    description: profileError.message,
-                    color: "error",
-                });
-                return;
-            }
-        }
-
-        const { error } = await client
-            .from("room_participants")
-            .upsert(
-                {
-                    room_id: roomId,
-                    user_id: userId,
-                    joined_at: new Date().toISOString(),
-                },
-                { onConflict: "room_id,user_id" },
-            );
-
-        if (error) {
-            toast.add({
-                title: "Unable to join room",
-                description: error.message,
-                color: "error",
-            });
-            return;
-        }
-
-        hasJoinedRoom.value = true;
+        await $fetch(`/api/rooms/${roomId}/join`, { method: "POST" });
+        await refresh();
         isJoinModalOpen.value = false;
+    } catch (error: any) {
+        toast.add({
+            title: "Unable to join room",
+            description: error?.data?.message ?? error.message,
+            color: "error",
+        });
     } finally {
         isJoiningRoom.value = false;
     }
 }
 
-const {
-    data: room,
-    status: roomStatus,
-    error: roomError,
-    refresh,
-} = await useAsyncData(
-    `room-${roomId}`,
-    async () => {
-        if (!user.value || !hasJoinedRoom.value) return null;
-
-        const { data, error: fetchError } = await client
-            .from("rooms")
-            .select("*")
-            .eq("id", roomId)
-            .single();
-
-        if (fetchError) throw fetchError;
-        return data;
-    },
-    {
-        watch: [user, hasJoinedRoom],
-    },
-);
-
 const joinModalTitle = computed(() => {
     if (inviteRoomName.value) return inviteRoomName.value;
+    if (room.value?.name) return room.value.name;
     return "Join this room";
 });
 
 const joinModalDescription = computed(() => {
     if (inviteRoomDescription.value) return inviteRoomDescription.value;
+    if (room.value?.description) return room.value.description;
     return "You've been invited to collaborate in this planning poker room.";
 });
 
 const isRoomLoading = computed(() => {
-    if (!user.value) {
-        return (
-            isPreparingAnonymousSession.value ||
-            !hasAttemptedAnonymousSession.value
-        );
-    }
-
-    return (
-        participantStatus.value === "pending" ||
-        (hasJoinedRoom.value &&
-            (roomStatus.value === "idle" || roomStatus.value === "pending"))
-    );
+    if (!user.value) return true;
+    return roomStatus.value === "idle" || roomStatus.value === "pending";
 });
 
 const canJoinRoom = computed(() => {
     if (isJoiningRoom.value) return false;
-    if (!isAnonymousUser.value) return true;
-    return guestDisplayName.value.trim().length >= 2;
+    return Boolean(user.value);
 });
 
 const showRoomError = computed(() => {
@@ -266,11 +122,11 @@ const canEdit = computed(() => {
     return !!(
         user.value &&
         room.value &&
-        room.value.created_by === user.value.sub
+        room.value.adminUserId === user.value.id
     );
 });
 
-const currentRoomCreatorId = computed(() => room.value?.created_by);
+const currentRoomCreatorId = computed(() => room.value?.adminUserId);
 
 // Composables
 const {
@@ -295,11 +151,16 @@ const { votes, selectedCard, selectCard } = useRoomVotes(
     hasJoinedRoom,
 );
 
-const { players, pokeUsers } = useRoomPresence(
+const { players, pokeUsers, lastPokeId } = useRoomPresence(
     roomId,
     currentRoomCreatorId,
     hasJoinedRoom,
 );
+
+watch(lastPokeId, (value) => {
+    if (!value) return;
+    pokeBurstKey.value += 1;
+});
 
 const transferCandidates = computed<TransferCandidate[]>(() =>
     players.value
@@ -310,113 +171,6 @@ const transferCandidates = computed<TransferCandidate[]>(() =>
             avatar: player.avatar,
             isOnline: player.isOnline,
         })),
-);
-
-let roomChannel: ReturnType<typeof client.channel> | null = null;
-
-function cleanupRoomChannel() {
-    if (roomChannel) {
-        client.removeChannel(roomChannel);
-        roomChannel = null;
-    }
-}
-
-function setupRoomChannel() {
-    if (!hasJoinedRoom.value || roomChannel) return;
-
-    roomChannel = client.channel(`room-meta:${roomId}`, {
-        config: {
-            private: true,
-        },
-    });
-    roomChannel
-        .on(
-            "postgres_changes",
-            {
-                event: "UPDATE",
-                schema: "public",
-                table: "rooms",
-                filter: `id=eq.${roomId}`,
-            },
-            (payload: any) => {
-                room.value = payload.new;
-            },
-        )
-        .on(
-            "postgres_changes",
-            {
-                event: "DELETE",
-                schema: "public",
-                table: "rooms",
-                filter: `id=eq.${roomId}`,
-            },
-            async () => {
-                toast.add({
-                    title: "Room deleted",
-                    description: "This room was removed.",
-                    color: "warning",
-                });
-                await navigateTo("/rooms");
-            },
-        )
-        .subscribe();
-}
-
-watch(
-    hasJoinedRoom,
-    (joined) => {
-        if (!joined) {
-            cleanupRoomChannel();
-            return;
-        }
-
-        setupRoomChannel();
-    },
-    { immediate: true },
-);
-
-onUnmounted(() => {
-    cleanupRoomChannel();
-});
-
-const userProfileAsyncDataKey = computed(() => {
-    return user.value?.sub
-        ? `room-user-profile:${user.value.sub}`
-        : "room-user-profile:anonymous";
-});
-
-// Fetch current user profile
-const { data: userProfile } = await useAsyncData(
-    userProfileAsyncDataKey,
-    async () => {
-        if (!user.value) return null;
-        const { data } = await client
-            .from("profile")
-            .select("name, avatar")
-            .eq("user_id", user.value.sub)
-            .maybeSingle();
-        return data;
-    },
-    {
-        watch: [user],
-        default: () => null,
-    },
-);
-
-watch(
-    [isAnonymousUser, userProfile],
-    ([anonymous, profile]) => {
-        if (!anonymous) {
-            guestDisplayName.value = "";
-            return;
-        }
-
-        if (guestDisplayName.value.trim().length > 0) return;
-        if (profile?.name) {
-            guestDisplayName.value = profile.name;
-        }
-    },
-    { immediate: true },
 );
 
 // Modal handlers
@@ -501,20 +255,6 @@ function onViewVotes(story: any) {
                         </p>
                     </div>
 
-                    <UFormField
-                        v-if="isAnonymousUser"
-                        label="Your name"
-                        description="Guest users must set a display name before joining."
-                        required
-                    >
-                        <UInput
-                            v-model="guestDisplayName"
-                            placeholder="Enter your name"
-                            maxlength="60"
-                            @keydown.enter="joinRoom"
-                        />
-                    </UFormField>
-
                     <div class="flex justify-end gap-2">
                         <UButton
                             to="/rooms"
@@ -536,6 +276,10 @@ function onViewVotes(story: any) {
     </div>
 
     <div v-else class="min-h-screen">
+        <ClientOnly>
+            <RoomBirdBurst :burst-key="pokeBurstKey" />
+        </ClientOnly>
+
         <div class="grid grid-cols-1 lg:grid-cols-4 overflow-hidden gap-6 p-6">
             <!-- Main Content Area -->
             <div

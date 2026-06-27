@@ -12,11 +12,11 @@ const CARD_LABELS: Record<string, string> = {
     '40': '40',
     '100': '100',
     '?': '?',
-    'coffee': '☕'
+    '☕': '☕'
 }
 
 // Non-numeric values excluded from average calculation
-const NON_NUMERIC_VALUES = ['?', 'coffee']
+const NON_NUMERIC_VALUES = ['?', '☕']
 
 const props = defineProps<{
     votes: Record<string, string>
@@ -106,7 +106,7 @@ function getBarColor(value: string): string {
                     <!-- Card Label -->
                     <div
                         class="w-12 h-12 flex items-center justify-center rounded-lg border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shrink-0">
-                        <span v-if="tally.value === 'coffee'" class="text-xl">☕</span>
+                        <span v-if="tally.value === '☕'" class="text-xl">☕</span>
                         <span v-else class="text-xl font-medium text-neutral-700 dark:text-neutral-200">
                             {{ tally.label }}
                         </span>
