@@ -1,167 +1,106 @@
 <script setup lang="ts">
-import * as z from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui'
-import type { Database } from '~/types/database.types'
+import * as z from "zod";
+import type { FormSubmitEvent } from "@nuxt/ui";
 
-const supabase = useSupabaseClient<Database>()
-const user = useSupabaseUser()
-const isAnonymousUser = useIsAnonymousUser(user)
-const toast = useToast()
-const isMounted = ref(false)
+const { user } = useCurrentUser();
+const toast = useToast();
+const isMounted = ref(false);
 
 const profileSchema = z.object({
-    name: z.string().min(2, 'Name must be at least 2 characters'),
-    email: z.email(),
-    avatar: z.any().optional() // File handling is manual usually, but kept for structure
-})
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  email: z.email(),
+  avatar: z.any().optional(),
+});
 
-type ProfileSchema = z.output<typeof profileSchema>
+type ProfileSchema = z.output<typeof profileSchema>;
 
 const profileState = reactive<ProfileSchema>({
-    name: '',
-    email: '',
-})
-const avatarUrl = ref<string | null>(null)
+  name: "",
+  email: "",
+});
+const avatarUrl = ref<string | null>(null);
 
-const profileAsyncDataKey = computed(() => {
-    return user.value?.sub ? `profile:${user.value.sub}` : 'profile:anonymous'
-})
-
-const { data: profile } = useAsyncData(profileAsyncDataKey, async () => {
-    if (!user.value) return null
-    const { data } = await supabase
-        .from('profile')
-        .select('name, avatar')
-        .eq('user_id', user.value.sub)
-        .single()
-    return data
+const { data: profile, refresh } = useAsyncData("profile", async () => {
+  if (!user.value) return null;
+  return $fetch<{
+    name: string;
+    email: string;
+    avatar: string | null;
+    avatarPath: string | null;
+  }>("/api/profile");
 }, {
-    watch: [user],
-    default: () => null,
-})
+  watch: [user],
+  default: () => null,
+});
 
 watch(profile, (newProfile) => {
-    if (newProfile) {
-        if (newProfile.name) profileState.name = newProfile.name
-        if (newProfile.avatar) avatarUrl.value = newProfile.avatar
-    }
-}, { immediate: true })
+  if (newProfile) {
+    profileState.name = newProfile.name;
+    profileState.email = newProfile.email;
+    avatarUrl.value = newProfile.avatar;
+  }
+}, { immediate: true });
 
 function syncEmailFromUser() {
-    profileState.email = user.value?.email || ''
+  profileState.email = user.value?.email || "";
 }
 
 watch(user, () => {
-    if (!isMounted.value) return
-    syncEmailFromUser()
-})
+  if (!isMounted.value) return;
+  syncEmailFromUser();
+});
 
 onMounted(() => {
-    isMounted.value = true
-    syncEmailFromUser()
-})
-
+  isMounted.value = true;
+  syncEmailFromUser();
+});
 
 async function onProfileSubmit(payload: FormSubmitEvent<ProfileSchema>) {
-    try {
-        if (!user.value) return
+  try {
+    if (!user.value) return;
 
-        const updates = {
-            name: payload.data.name,
-            avatar: avatarUrl.value,
-            updated_at: new Date().toISOString(),
-        }
+    await $fetch("/api/profile", {
+      method: "PATCH",
+      body: {
+        name: payload.data.name,
+      },
+    });
 
-        // Check if profile exists
-        const { data: existingProfile } = await supabase
-            .from('profile')
-            .select('id')
-            .eq('user_id', user.value.sub)
-            .maybeSingle()
-
-        if (existingProfile) {
-            const { error } = await supabase
-                .from('profile')
-                .update(updates)
-                .eq('user_id', user.value.sub)
-
-            if (error) throw error
-        } else {
-            const { error } = await supabase
-                .from('profile')
-                .insert({
-                    user_id: user.value.sub,
-                    ...updates,
-                })
-
-            if (error) throw error
-        }
-
-        toast.add({ title: 'Success', description: 'Profile updated!', color: 'success' })
-
-    } catch (error: any) {
-        toast.add({ title: 'Error', description: error.message, color: 'error' })
-    }
+    await refresh();
+    toast.add({ title: "Success", description: "Profile updated!", color: "success" });
+  } catch (error: any) {
+    toast.add({ title: "Error", description: error?.data?.message ?? error.message, color: "error" });
+  }
 }
 
-
 async function onAvatarUpdate(url: string | null) {
-    avatarUrl.value = url
-
-    if (!user.value || !url) return
-
-    try {
-        const { error } = await supabase
-            .from('profile')
-            .update({
-                avatar: url,
-                updated_at: new Date().toISOString(),
-            })
-            .eq('user_id', user.value.sub)
-
-        if (error) throw error
-    } catch (error: any) {
-        toast.add({ title: 'Error saving avatar', description: error.message, color: 'error' })
-    }
+  avatarUrl.value = url;
+  await refresh();
 }
 </script>
 
 <template>
-    <UCard>
-        <template #header>
-            <h2 class="text-xl font-semibold">Profile</h2>
-            <p class="text-sm text-neutral-500">Update your personal information</p>
-        </template>
+  <UCard>
+    <template #header>
+      <h2 class="text-xl font-semibold">Profile</h2>
+      <p class="text-sm text-neutral-500">Update your personal information</p>
+    </template>
 
-        <UForm :schema="profileSchema" :state="profileState" @submit="onProfileSubmit" class="text-sm space-y-4">
-            <!-- Name Row -->
-            <UFormField name="name" label="Name" description="What you want others to call you." required
-                class="flex max-sm:flex-col justify-between items-start gap-4">
-                <UInput v-model="profileState.name" autocomplete="off" trailing-icon="i-lucide-user" />
-            </UFormField>
-            <USeparator />
-            <UFormField name="email" label="Email" description="Your email address."
-                class="flex max-sm:flex-col justify-between items-start gap-4">
-                <UInput v-model="profileState.email" variant="subtle" autocomplete="off"
-                    trailing-icon="i-lucide-at-sign" disabled />
-            </UFormField>
-            <USeparator />
-            <!-- Avatar Row -->
-            <UFormField name="avatar" label="Avatar" description="JPG, GIF or PNG. 1MB Max."
-                class="flex max-sm:flex-col justify-between sm:items-center gap-4">
-                <template v-if="!isAnonymousUser">
-                    <AccountAvatarUpload :model-value="avatarUrl" @update:model-value="onAvatarUpdate"
-                        :name="profileState.name" />
-                </template>
-                <template v-else>
-                    <div class="max-w-sm rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-sm text-warning-800 dark:border-warning-900 dark:bg-warning-950/40 dark:text-warning-200">
-                        Sign up to upload a custom avatar. Guest accounts can still update their display name here.
-                    </div>
-                </template>
-            </UFormField>
-            <div class="flex justify-end pt-4">
-                <UButton type="submit" label="Save changes" color="neutral" variant="solid" />
-            </div>
-        </UForm>
-    </UCard>
+    <UForm :schema="profileSchema" :state="profileState" @submit="onProfileSubmit" class="text-sm space-y-4">
+      <UFormField name="name" label="Name" description="What you want others to call you." required class="flex max-sm:flex-col justify-between items-start gap-4">
+        <UInput v-model="profileState.name" autocomplete="off" trailing-icon="i-lucide-user" />
+      </UFormField>
+      <USeparator />
+      <UFormField name="email" label="Email" description="Your email address." class="flex max-sm:flex-col justify-between items-start gap-4">
+        <UInput v-model="profileState.email" variant="subtle" autocomplete="off" trailing-icon="i-lucide-at-sign" disabled />
+      </UFormField>
+      <USeparator />
+      <UFormField name="avatar" label="Avatar" description="JPG, GIF, WebP, or PNG. 1MB Max." class="flex max-sm:flex-col justify-between sm:items-center gap-4">
+        <AccountAvatarUpload :model-value="avatarUrl" @update:model-value="onAvatarUpdate" :name="profileState.name" />
+      </UFormField>
+      <div class="flex justify-end pt-4">
+        <UButton type="submit" label="Save changes" color="neutral" variant="solid" />
+      </div>
+    </UForm>
+  </UCard>
 </template>

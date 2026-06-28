@@ -1,49 +1,39 @@
 <script setup lang="ts">
 definePageMeta({
-  layout: 'auth'
-})
+  layout: "auth",
+});
 
-const user = useSupabaseUser()
-const route = useRoute()
-const redirectInfo = useSupabaseCookieRedirect()
-const hasRedirected = ref(false)
+const route = useRoute();
+const { user, refresh } = useCurrentUser();
+const hasRedirected = ref(false);
 
 function getQueryRedirectPath(): string | null {
-  const redirectTo = route.query.redirectTo
-  if (typeof redirectTo !== 'string' || !redirectTo.startsWith('/')) {
-    return null
+  const redirectTo = route.query.redirectTo;
+  if (typeof redirectTo !== "string" || !redirectTo.startsWith("/") || redirectTo.startsWith("//")) {
+    return null;
   }
 
-  if (redirectTo === '/login' || redirectTo === '/confirm') {
-    return null
+  if (redirectTo === "/login" || redirectTo === "/confirm") {
+    return null;
   }
 
-  return redirectTo
+  return redirectTo;
 }
 
 function getPostAuthPath(): string {
-  const queryPath = getQueryRedirectPath()
-  if (queryPath) return queryPath
-
-  const cookiePath = redirectInfo.pluck()
-  if (
-    typeof cookiePath === 'string' &&
-    cookiePath.startsWith('/') &&
-    cookiePath !== '/login' &&
-    cookiePath !== '/confirm'
-  ) {
-    return cookiePath
-  }
-
-  return '/rooms'
+  return getQueryRedirectPath() ?? "/rooms";
 }
+
+onMounted(() => {
+  void refresh();
+});
 
 watch(user, async () => {
   if (user.value && !hasRedirected.value) {
-    hasRedirected.value = true
-    await navigateTo(getPostAuthPath())
+    hasRedirected.value = true;
+    await navigateTo(getPostAuthPath());
   }
-}, { immediate: true })
+}, { immediate: true });
 </script>
 
 <template>

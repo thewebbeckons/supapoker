@@ -1,12 +1,10 @@
 <script lang="ts" setup>
-import type { Database } from '~/types/database.types'
-
 const props = defineProps<{
     modelValue: boolean
     room: {
         id: string
         name: string
-        created_by: string | null
+        adminUserId: string
     } | null
 }>()
 
@@ -15,7 +13,6 @@ const emit = defineEmits<{
     (e: 'success'): void
 }>()
 
-const client = useSupabaseClient<Database>()
 const toast = useToast()
 
 const storiesInput = ref('')
@@ -48,23 +45,18 @@ async function createStories() {
         return
     }
 
-    const { error: insertError } = await client
-        .from('stories')
-        .insert(
-            titles.map(title => ({
-                room_id: props.room!.id,
-                title,
-                status: 'pending' // Default status
-            }))
-        )
-
-    isUpdating.value = false
-
-    if (insertError) {
-        toast.add({ title: 'Error', description: insertError.message, color: 'error' })
+    try {
+        await $fetch(`/api/rooms/${props.room.id}/stories`, {
+            method: 'POST',
+            body: { titles },
+        })
+    } catch (error: any) {
+        toast.add({ title: 'Error', description: error?.data?.message ?? error.message, color: 'error' })
+        isUpdating.value = false
         return
     }
 
+    isUpdating.value = false
     emit('success')
     isOpen.value = false
     toast.add({ title: 'Success', description: `Created ${titles.length} stor${titles.length === 1 ? 'y' : 'ies'}`, color: 'success' })

@@ -4,7 +4,7 @@ import type { Player } from '~/types/room'
 
 const { copy } = useClipboard()
 const toast = useToast()
-const user = useSupabaseUser()
+const { user } = useCurrentUser()
 
 const props = defineProps<{
     players: Player[],
@@ -88,8 +88,8 @@ function copyRoomUrl() {
                 </div>
                 <div class="flex items-center gap-2">                    
                     <div class="text-lg font-medium text-neutral-700 dark:text-neutral-300">
-                        <template v-if="isVoted || player.id === user?.sub">
-                            <UIcon v-if="playerVote(player.id) === 'coffee'" name="i-lucide-coffee"
+                        <template v-if="isVoted || player.id === user?.id">
+                            <UIcon v-if="playerVote(player.id) === '☕'" name="i-lucide-coffee"
                                 class="w-6 h-6 text-neutral-900 dark:text-white" />
                             <span v-else>{{ playerVote(player.id) }}</span>
                         </template>

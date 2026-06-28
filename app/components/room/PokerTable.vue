@@ -12,7 +12,7 @@ const CARDS = [
     { label: '40', value: '40' },
     { label: '100', value: '100' },
     { label: '?', value: '?' },
-    { label: '☕', value: 'coffee', icon: 'i-lucide-coffee' }
+    { label: '☕', value: '☕', icon: 'i-lucide-coffee' }
 ]
 
 defineProps<{
