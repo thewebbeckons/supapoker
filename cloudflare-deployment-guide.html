@@ -1,0 +1,727 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Supapoker Cloudflare Deployment Guide</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --ink: #18202a;
+      --muted: #667085;
+      --line: #d7dde6;
+      --accent: #f48120;
+      --accent-dark: #b85a11;
+      --blue: #2563eb;
+      --green: #15803d;
+      --red: #b42318;
+      --code-bg: #111827;
+      --code-ink: #e5e7eb;
+      --shadow: 0 18px 50px rgba(24, 32, 42, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+    }
+
+    a {
+      color: var(--blue);
+      text-decoration: none;
+      font-weight: 650;
+    }
+
+    a:hover {
+      text-decoration: underline;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 64px;
+    }
+
+    .hero {
+      display: grid;
+      gap: 22px;
+      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);
+      align-items: stretch;
+      margin-bottom: 24px;
+    }
+
+    .hero-main,
+    .hero-side,
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero-main {
+      padding: 34px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-main::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 6px;
+      background: linear-gradient(90deg, var(--accent), var(--blue), var(--green));
+    }
+
+    .eyebrow {
+      color: var(--accent-dark);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 0 0 12px;
+    }
+
+    h1 {
+      font-size: clamp(34px, 4vw, 56px);
+      line-height: 1.02;
+      letter-spacing: 0;
+      margin: 0 0 16px;
+    }
+
+    h2 {
+      font-size: 24px;
+      line-height: 1.2;
+      letter-spacing: 0;
+      margin: 0 0 12px;
+    }
+
+    h3 {
+      font-size: 17px;
+      margin: 0 0 8px;
+    }
+
+    p {
+      margin: 0 0 12px;
+    }
+
+    .lead {
+      color: var(--muted);
+      font-size: 18px;
+      max-width: 760px;
+      margin-bottom: 20px;
+    }
+
+    .hero-side {
+      padding: 24px;
+    }
+
+    .status-list {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .status {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 10px;
+      align-items: start;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      margin-top: 7px;
+      background: var(--green);
+      box-shadow: 0 0 0 4px rgba(21, 128, 61, 0.12);
+    }
+
+    .dot.todo {
+      background: var(--accent);
+      box-shadow: 0 0 0 4px rgba(244, 129, 32, 0.16);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .card {
+      grid-column: span 12;
+      padding: 24px;
+    }
+
+    .half {
+      grid-column: span 6;
+    }
+
+    .third {
+      grid-column: span 4;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 42px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .step-number {
+      display: grid;
+      place-items: center;
+      width: 42px;
+      height: 42px;
+      border-radius: 8px;
+      background: #fff3e8;
+      color: var(--accent-dark);
+      font-weight: 850;
+      border: 1px solid #ffd8b5;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: #fbfcfe;
+      color: #344054;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    ul {
+      margin: 8px 0 0;
+      padding-left: 21px;
+    }
+
+    li {
+      margin: 7px 0;
+    }
+
+    code {
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      font-size: 0.94em;
+      background: #eef2f7;
+      border: 1px solid #dde5ef;
+      border-radius: 5px;
+      padding: 1px 5px;
+    }
+
+    pre {
+      margin: 12px 0 0;
+      padding: 14px 16px;
+      overflow-x: auto;
+      background: var(--code-bg);
+      color: var(--code-ink);
+      border-radius: 8px;
+      border: 1px solid #263244;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    pre code {
+      background: transparent;
+      border: 0;
+      color: inherit;
+      padding: 0;
+      font-size: inherit;
+    }
+
+    .callout {
+      border-left: 4px solid var(--blue);
+      background: #eff6ff;
+      padding: 14px 16px;
+      border-radius: 0 8px 8px 0;
+      margin-top: 14px;
+      color: #1e3a8a;
+    }
+
+    .warning {
+      border-left-color: var(--accent);
+      background: #fff7ed;
+      color: #8a3b05;
+    }
+
+    .danger {
+      border-left-color: var(--red);
+      background: #fef3f2;
+      color: #912018;
+    }
+
+    .checklist {
+      display: grid;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .check {
+      display: grid;
+      grid-template-columns: 22px 1fr;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .box {
+      width: 18px;
+      height: 18px;
+      margin-top: 3px;
+      border: 2px solid #98a2b3;
+      border-radius: 4px;
+      background: #fff;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+
+    .table th,
+    .table td {
+      border-bottom: 1px solid var(--line);
+      padding: 10px 8px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    .table th {
+      color: #344054;
+      font-size: 12px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .muted {
+      color: var(--muted);
+    }
+
+    .footer {
+      color: var(--muted);
+      font-size: 13px;
+      margin-top: 28px;
+      text-align: center;
+    }
+
+    @media (max-width: 860px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .half,
+      .third {
+        grid-column: span 12;
+      }
+
+      .hero-main {
+        padding: 28px 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="hero-main">
+        <p class="eyebrow">Supapoker deployment checklist</p>
+        <h1>Cloudflare setup guide</h1>
+        <p class="lead">
+          Use this guide to prepare the Cloudflare resources needed by this NuxtHub version of Supapoker, wire the production configuration, and deploy the Worker.
+        </p>
+        <div class="pill-row">
+          <span class="pill">Nuxt 4</span>
+          <span class="pill">NuxtHub</span>
+          <span class="pill">D1</span>
+          <span class="pill">R2 Blob</span>
+          <span class="pill">Durable Objects</span>
+          <span class="pill">Better Auth</span>
+          <span class="pill">Cloudflare Email</span>
+        </div>
+      </div>
+
+      <aside class="hero-side">
+        <h2>Repo Status</h2>
+        <p class="muted">What is already present versus what still needs your Cloudflare account values.</p>
+        <div class="status-list">
+          <div class="status">
+            <span class="dot"></span>
+            <span><strong>Already configured:</strong> Worker build, Durable Object binding, email binding, Better Auth runtime variables, NuxtHub modules.</span>
+          </div>
+          <div class="status">
+            <span class="dot todo"></span>
+            <span><strong>You still provide:</strong> D1 database ID, R2 bucket name, production domain, GitHub OAuth app, email sender, secrets.</span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="grid">
+      <article class="card half">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div>
+            <h2>Install and Login</h2>
+            <p>Install dependencies, then authenticate Wrangler against the Cloudflare account that will own the app.</p>
+            <pre><code>pnpm install
+pnpm exec wrangler login
+pnpm exec wrangler whoami</code></pre>
+            <div class="callout">
+              Use the same Cloudflare account for D1, R2, Email Sending, and the deployed Worker unless you intentionally separate accounts.
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card half">
+        <div class="step">
+          <div class="step-number">2</div>
+          <div>
+            <h2>Create Cloudflare Resources</h2>
+            <p>Create the production D1 database and R2 bucket. Save the D1 <code>database_id</code> printed by Wrangler.</p>
+            <pre><code>pnpm exec wrangler d1 create supapoker-prod
+pnpm exec wrangler r2 bucket create supapoker-avatars</code></pre>
+            <ul>
+              <li><strong>D1</strong> stores rooms, profiles, stories, historical estimates, and Better Auth tables.</li>
+              <li><strong>R2</strong> stores uploaded profile images through NuxtHub blob.</li>
+              <li><strong>Durable Objects</strong> are created by deployment migration, so there is no separate create command.</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="step">
+          <div class="step-number">3</div>
+          <div>
+            <h2>Wire NuxtHub to D1 and R2</h2>
+            <p>The app currently enables NuxtHub database and blob support. Before production deploy, replace the placeholder-style local configuration in <code>nuxt.config.ts</code> with your D1 database ID and R2 bucket name.</p>
+            <pre><code>hub: {
+  db: {
+    dialect: "sqlite",
+    driver: "d1",
+    connection: {
+      databaseId: "&lt;D1_DATABASE_ID_FROM_WRANGLER&gt;"
+    }
+  },
+  blob: {
+    driver: "cloudflare-r2",
+    bucketName: "supapoker-avatars"
+  },
+  kv: false,
+  cache: false
+}</code></pre>
+            <div class="callout warning">
+              Do not edit files inside <code>.output</code>. Build output is generated by Nuxt/Nitro and should be recreated with <code>pnpm run build</code>.
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card half">
+        <div class="step">
+          <div class="step-number">4</div>
+          <div>
+            <h2>Confirm Worker Bindings</h2>
+            <p>The root <code>wrangler.jsonc</code> already includes the Durable Object binding and the Cloudflare Email binding.</p>
+            <pre><code>{
+  "name": "supapoker",
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOM_SESSION", "class_name": "RoomSession" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["RoomSession"] }
+  ],
+  "send_email": [
+    { "name": "EMAIL" }
+  ]
+}</code></pre>
+            <p class="muted">Optional: restrict allowed sender addresses after your email sender is verified.</p>
+            <pre><code>"send_email": [
+  {
+    "name": "EMAIL",
+    "allowed_sender_addresses": ["noreply@your-domain.com"]
+  }
+]</code></pre>
+          </div>
+        </div>
+      </article>
+
+      <article class="card half">
+        <div class="step">
+          <div class="step-number">5</div>
+          <div>
+            <h2>Set Email Sending</h2>
+            <p>In the Cloudflare dashboard, configure Email Sending for the domain you will send from.</p>
+            <ul>
+              <li>Verify the domain or sender address in Cloudflare Email.</li>
+              <li>Use a real sender such as <code>noreply@your-domain.com</code>.</li>
+              <li>Set <code>EMAIL_FROM</code> to a value Better Auth can use in transactional emails.</li>
+            </ul>
+            <pre><code>SupaPoker &lt;noreply@your-domain.com&gt;</code></pre>
+            <div class="callout">
+              If emails are skipped in production logs, confirm the deployed Worker has a binding named exactly <code>EMAIL</code>.
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="step">
+          <div class="step-number">6</div>
+          <div>
+            <h2>Create the GitHub OAuth App</h2>
+            <p>Create an OAuth app in GitHub Developer Settings using your final production URL.</p>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Field</th>
+                  <th>Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Application name</td>
+                  <td>Supapoker</td>
+                </tr>
+                <tr>
+                  <td>Homepage URL</td>
+                  <td><code>https://your-domain.com</code></td>
+                </tr>
+                <tr>
+                  <td>Authorization callback URL</td>
+                  <td><code>https://your-domain.com/api/auth/callback/github</code></td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="callout warning">
+              The callback URL must match exactly. A wrong scheme, host, path, or trailing environment domain will break GitHub login.
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="step">
+          <div class="step-number">7</div>
+          <div>
+            <h2>Set Production Secrets and Variables</h2>
+            <p>Generate a Better Auth secret, then add secrets to the deployed Worker. Do not commit real values to the repository.</p>
+            <pre><code>openssl rand -base64 32
+
+pnpm exec wrangler secret put BETTER_AUTH_SECRET
+pnpm exec wrangler secret put GITHUB_CLIENT_ID
+pnpm exec wrangler secret put GITHUB_CLIENT_SECRET</code></pre>
+            <p>Add non-secret runtime variables through the Cloudflare dashboard or a <code>vars</code> block in <code>wrangler.jsonc</code>.</p>
+            <pre><code>"vars": {
+  "NUXT_PUBLIC_SITE_URL": "https://your-domain.com",
+  "EMAIL_FROM": "SupaPoker &lt;noreply@your-domain.com&gt;"
+}</code></pre>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Purpose</th>
+                  <th>Recommended storage</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>BETTER_AUTH_SECRET</code></td>
+                  <td>Signs Better Auth sessions and tokens.</td>
+                  <td>Secret</td>
+                </tr>
+                <tr>
+                  <td><code>GITHUB_CLIENT_ID</code></td>
+                  <td>GitHub OAuth app identifier.</td>
+                  <td>Secret or variable</td>
+                </tr>
+                <tr>
+                  <td><code>GITHUB_CLIENT_SECRET</code></td>
+                  <td>GitHub OAuth app secret.</td>
+                  <td>Secret</td>
+                </tr>
+                <tr>
+                  <td><code>NUXT_PUBLIC_SITE_URL</code></td>
+                  <td>Public app origin used for auth redirects and links.</td>
+                  <td>Variable</td>
+                </tr>
+                <tr>
+                  <td><code>EMAIL_FROM</code></td>
+                  <td>Verified sender used for transactional email.</td>
+                  <td>Variable</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
+      <article class="card half">
+        <div class="step">
+          <div class="step-number">8</div>
+          <div>
+            <h2>Build and Deploy</h2>
+            <p>Run checks locally, build the Nuxt app, then deploy the generated Cloudflare Worker.</p>
+            <pre><code>pnpm run typecheck
+pnpm run build
+pnpm run cf:deploy</code></pre>
+            <p class="muted">The <code>cf:deploy</code> script runs <code>pnpm build</code> and then <code>wrangler --cwd .output deploy</code>.</p>
+            <div class="callout">
+              After build, the Cloudflare deployment config lives at <code>.output/server/wrangler.json</code>. Inspect it if a binding is missing.
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card half">
+        <div class="step">
+          <div class="step-number">9</div>
+          <div>
+            <h2>Verify D1 Tables</h2>
+            <p>NuxtHub includes database migrations in the build. After deploy, confirm the D1 database has the expected tables.</p>
+            <pre><code>pnpm exec wrangler d1 execute supapoker-prod \
+  --remote \
+  --command "SELECT name FROM sqlite_master WHERE type='table';"</code></pre>
+            <div class="callout warning">
+              If the tables are missing, run the NuxtHub migration command for the configured production database before testing auth or room creation.
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card half">
+        <div class="step">
+          <div class="step-number">10</div>
+          <div>
+            <h2>Add the Custom Domain</h2>
+            <p>In Cloudflare Workers, attach your custom domain or route to the <code>supapoker</code> Worker.</p>
+            <ul>
+              <li>Worker target: <code>supapoker</code></li>
+              <li>Domain example: <code>poker.your-domain.com</code></li>
+              <li>Update <code>NUXT_PUBLIC_SITE_URL</code> to the final URL.</li>
+              <li>Update the GitHub OAuth callback to the final URL.</li>
+            </ul>
+          </div>
+        </div>
+      </article>
+
+      <article class="card half">
+        <div class="step">
+          <div class="step-number">11</div>
+          <div>
+            <h2>Production Smoke Test</h2>
+            <div class="checklist">
+              <div class="check"><span class="box"></span><span>Email/password signup sends verification email.</span></div>
+              <div class="check"><span class="box"></span><span>GitHub login completes and returns to the app.</span></div>
+              <div class="check"><span class="box"></span><span>A signed-in user can create a room.</span></div>
+              <div class="check"><span class="box"></span><span>A second signed-in user can join from an invite link.</span></div>
+              <div class="check"><span class="box"></span><span>Admin can create a story, start voting, stop voting, and reveal estimates.</span></div>
+              <div class="check"><span class="box"></span><span>Completing a story persists the estimate and vote snapshot in D1.</span></div>
+              <div class="check"><span class="box"></span><span>Poke sends a bird burst to all connected users without audio permissions.</span></div>
+              <div class="check"><span class="box"></span><span>Avatar upload stores and serves from R2 blob.</span></div>
+            </div>
+          </div>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="step">
+          <div class="step-number">12</div>
+          <div>
+            <h2>Troubleshooting Map</h2>
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Symptom</th>
+                  <th>Likely cause</th>
+                  <th>Fix</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>Room realtime binding is not configured</code></td>
+                  <td>The deployed Worker output is missing <code>ROOM_SESSION</code>.</td>
+                  <td>Run <code>pnpm run build</code> and inspect <code>.output/server/wrangler.json</code>. Confirm root <code>wrangler.jsonc</code> has the Durable Object binding and migration.</td>
+                </tr>
+                <tr>
+                  <td>D1 binding or database errors</td>
+                  <td>NuxtHub production database config is missing the D1 database ID.</td>
+                  <td>Add the D1-backed <code>hub.db</code> config in <code>nuxt.config.ts</code>, rebuild, and redeploy.</td>
+                </tr>
+                <tr>
+                  <td>Email is skipped or unavailable</td>
+                  <td>The deployed Worker does not have an <code>EMAIL</code> send_email binding, or the sender is not verified.</td>
+                  <td>Verify Cloudflare Email setup and inspect the generated Wrangler output for <code>send_email</code>.</td>
+                </tr>
+                <tr>
+                  <td>GitHub login redirect mismatch</td>
+                  <td>The GitHub OAuth callback URL does not exactly match production.</td>
+                  <td>Set callback to <code>https://your-domain.com/api/auth/callback/github</code>.</td>
+                </tr>
+                <tr>
+                  <td>Auth links point to the wrong host</td>
+                  <td><code>NUXT_PUBLIC_SITE_URL</code> is missing or still set to localhost.</td>
+                  <td>Set it to the final production URL and redeploy.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </article>
+
+      <article class="card third">
+        <h2>Useful Docs</h2>
+        <ul>
+          <li><a href="https://hub.nuxt.com/docs/getting-started/deploy">NuxtHub deploy</a></li>
+          <li><a href="https://hub.nuxt.com/docs/database">NuxtHub database</a></li>
+          <li><a href="https://hub.nuxt.com/docs/blob">NuxtHub blob</a></li>
+        </ul>
+      </article>
+
+      <article class="card third">
+        <h2>Cloudflare Docs</h2>
+        <ul>
+          <li><a href="https://developers.cloudflare.com/workers/wrangler/">Wrangler</a></li>
+          <li><a href="https://developers.cloudflare.com/d1/">D1</a></li>
+          <li><a href="https://developers.cloudflare.com/r2/">R2</a></li>
+          <li><a href="https://developers.cloudflare.com/durable-objects/">Durable Objects</a></li>
+        </ul>
+      </article>
+
+      <article class="card third">
+        <h2>Auth and Email</h2>
+        <ul>
+          <li><a href="https://www.better-auth.com/docs/authentication/github">Better Auth GitHub</a></li>
+          <li><a href="https://developers.cloudflare.com/email-routing/email-workers/send-email-workers/">Cloudflare Email Workers</a></li>
+        </ul>
+      </article>
+    </section>
+
+    <p class="footer">
+      Keep secrets out of source control. Rebuild after every binding, variable, or NuxtHub config change so the generated Cloudflare output stays current.
+    </p>
+  </main>
+</body>
+</html>
