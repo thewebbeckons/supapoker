@@ -1,4 +1,4 @@
-import { count, eq } from "drizzle-orm";
+import { eq, max } from "drizzle-orm";
 import { db, schema } from "hub:db";
 import { z } from "zod";
 
@@ -13,11 +13,11 @@ export default defineEventHandler(async (event) => {
 
   await requireRoomAdmin(roomId, user.id);
   const body = await readValidatedBody(event, createStoriesSchema.parse);
-  const [countRow] = await db
-    .select({ value: count() })
+  const [sortOrderRow] = await db
+    .select({ value: max(schema.stories.sortOrder) })
     .from(schema.stories)
     .where(eq(schema.stories.roomId, roomId));
-  const existingCount = countRow?.value ?? 0;
+  const nextSortOrder = (sortOrderRow?.value ?? -1) + 1;
 
   const now = new Date();
   const rows = body.titles.map((title, index) => ({
@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
     roomId,
     title: title.trim(),
     status: "pending" as const,
-    sortOrder: existingCount + index,
+    sortOrder: nextSortOrder + index,
     createdAt: now,
     updatedAt: now,
   }));

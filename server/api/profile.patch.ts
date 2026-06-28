@@ -2,14 +2,22 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "hub:db";
 import { z } from "zod";
 
+const avatarPathSchema = z
+  .string()
+  .regex(/^[A-Za-z0-9_-]+\/avatar\.(gif|jpg|png|webp)$/, "Avatar path must be an uploaded avatar path.");
+
 const profileSchema = z.object({
   name: z.string().min(2).max(80),
-  avatarPath: z.string().nullable().optional(),
+  avatarPath: avatarPathSchema.nullable().optional(),
 });
 
 export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event);
   const body = await readValidatedBody(event, profileSchema.parse);
+  if (body.avatarPath && !body.avatarPath.startsWith(`${user.id}/`)) {
+    throw createError({ statusCode: 400, message: "Avatar path must be an uploaded avatar path." });
+  }
+
   const now = new Date();
 
   const [profile] = await db

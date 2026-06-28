@@ -33,6 +33,10 @@ export default defineEventHandler(async (event) => {
   }
 
   if (body.type === "setActive") {
+    if (story.status === "completed") {
+      throw createError({ statusCode: 400, message: "Completed stories cannot be made active." });
+    }
+
     await db
       .update(schema.stories)
       .set({ status: "pending", updatedAt: now })
@@ -50,6 +54,10 @@ export default defineEventHandler(async (event) => {
   }
 
   if (body.type === "startVote") {
+    if (!["active", "voted"].includes(story.status)) {
+      throw createError({ statusCode: 400, message: "Only active or voted stories can start voting." });
+    }
+
     await db
       .update(schema.stories)
       .set({ status: "voting", updatedAt: now })
@@ -60,6 +68,10 @@ export default defineEventHandler(async (event) => {
   }
 
   if (body.type === "stopVote") {
+    if (story.status !== "voting") {
+      throw createError({ statusCode: 400, message: "Only voting stories can stop voting." });
+    }
+
     const result = await stub.stopVote(body.storyId);
     await db
       .update(schema.stories)
@@ -72,6 +84,10 @@ export default defineEventHandler(async (event) => {
       .where(and(eq(schema.stories.id, body.storyId), eq(schema.stories.roomId, roomId)));
     await syncRoomSession(event, roomId);
     return result;
+  }
+
+  if (story.status !== "voted") {
+    throw createError({ statusCode: 400, message: "Only voted stories can be completed." });
   }
 
   const result = await stub.completeStory(body.storyId);

@@ -3,6 +3,7 @@ import { blob } from "hub:blob";
 import { db, schema } from "hub:db";
 
 const MAX_AVATAR_BYTES = 1024 * 1024;
+const MAX_AVATAR_REQUEST_BYTES = MAX_AVATAR_BYTES + 64 * 1024;
 const allowedMimeTypes = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 const extensionByMimeType: Record<string, string> = {
   "image/png": "png",
@@ -13,6 +14,11 @@ const extensionByMimeType: Record<string, string> = {
 
 export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event);
+  const contentLength = Number(getRequestHeader(event, "content-length") ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > MAX_AVATAR_REQUEST_BYTES) {
+    throw createError({ statusCode: 413, message: "Avatar upload request is too large." });
+  }
+
   const parts = await readMultipartFormData(event);
   const file = parts?.find(part => part.name === "avatar");
 

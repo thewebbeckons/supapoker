@@ -8,7 +8,12 @@ export default defineEventHandler(async (event) => {
 
   await requireRoomAdmin(roomId, user.id);
   await db.delete(schema.rooms).where(eq(schema.rooms.id, roomId));
-  await getRoomSessionStub(event, roomId).deleteRoom();
+
+  try {
+    await getRoomSessionStub(event, roomId).deleteRoom();
+  } catch (error) {
+    console.error("[rooms] Failed to clean up realtime room after delete", { roomId, error });
+  }
 
   return { ok: true };
 });

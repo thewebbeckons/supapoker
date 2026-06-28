@@ -64,9 +64,14 @@ export async function ensureProfileForUser(user: Pick<CurrentUser, "id" | "email
       createdAt: new Date(),
       updatedAt: new Date(),
     })
+    .onConflictDoNothing()
     .returning();
 
-  return profile;
+  if (profile) return profile;
+
+  return await db.query.profiles.findFirst({
+    where: eq(schema.profiles.userId, user.id),
+  });
 }
 
 export async function getRoomById(roomId: string) {

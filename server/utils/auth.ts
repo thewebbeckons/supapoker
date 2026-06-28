@@ -9,6 +9,13 @@ function getSiteUrl(event: H3Event) {
   const configured = config.public.siteUrl;
   if (configured) return configured;
 
+  if (!import.meta.dev) {
+    throw createError({
+      statusCode: 500,
+      message: "Site URL is not configured.",
+    });
+  }
+
   const request = toWebRequest(event);
   return new URL(request.url).origin;
 }

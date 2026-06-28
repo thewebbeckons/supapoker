@@ -69,6 +69,13 @@ export class RoomSession extends DurableObject<Env> {
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
     ctx.blockConcurrencyWhile(async () => {
+      for (const socket of ctx.getWebSockets()) {
+        const user = socket.deserializeAttachment() as ConnectedUser | null;
+        if (user?.id && user.name && user.avatar) {
+          this.sockets.set(socket, user);
+        }
+      }
+
       this.ctx.storage.sql.exec(`
         CREATE TABLE IF NOT EXISTS meta (
           key TEXT PRIMARY KEY,
