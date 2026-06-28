@@ -15,9 +15,10 @@ export function useRoomVotes(
 
   function selectCard(cardValue: string) {
     if (!isEnabled.value || !isVoting.value || !activeStory.value || !user.value) return;
+    if (!socket.send({ type: "vote", value: cardValue })) return;
+
     selectedCard.value = cardValue;
     votes.value = { ...votes.value, [user.value.id]: cardValue };
-    socket.send({ type: "vote", value: cardValue });
   }
 
   function clearVotes() {

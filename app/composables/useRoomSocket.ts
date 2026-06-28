@@ -9,12 +9,17 @@ interface RoomSocketState {
   isConnected: Ref<boolean>;
   connect: () => void;
   disconnect: () => void;
-  send: (payload: unknown) => void;
+  send: (payload: unknown) => boolean;
 }
 
-const roomSockets = new Map<string, RoomSocketState & { socket: WebSocket | null }>();
+type SharedRoomSocketState = RoomSocketState & {
+  socket: WebSocket | null;
+  activeSubscribers: number;
+};
 
-function createRoomSocket(roomId: string): RoomSocketState & { socket: WebSocket | null } {
+const roomSockets = new Map<string, SharedRoomSocketState>();
+
+function createRoomSocket(roomId: string): SharedRoomSocketState {
   const room = ref<Room | null>(null);
   const stories = ref<Story[]>([]);
   const players = ref<Player[]>([]);
@@ -101,8 +106,9 @@ function createRoomSocket(roomId: string): RoomSocketState & { socket: WebSocket
   }
 
   function send(payload: unknown) {
-    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    if (!socket || socket.readyState !== WebSocket.OPEN) return false;
     socket.send(JSON.stringify(payload));
+    return true;
   }
 
   return {
@@ -115,6 +121,7 @@ function createRoomSocket(roomId: string): RoomSocketState & { socket: WebSocket
     connect,
     disconnect,
     send,
+    activeSubscribers: 0,
     get socket() {
       return socket;
     },
@@ -130,22 +137,46 @@ export function useRoomSocket(roomId: string, isEnabled: Ref<boolean> = ref(true
     state = createRoomSocket(roomId);
     roomSockets.set(roomId, state);
   }
+  let isAcquired = false;
+
+  function acquire() {
+    if (!import.meta.client || isAcquired || !state) return;
+    if (!roomSockets.has(roomId)) {
+      roomSockets.set(roomId, state);
+    }
+    isAcquired = true;
+    state.activeSubscribers += 1;
+    state.connect();
+  }
+
+  function release() {
+    if (!import.meta.client || !isAcquired || !state) return;
+
+    isAcquired = false;
+    state.activeSubscribers = Math.max(0, state.activeSubscribers - 1);
+
+    if (state.activeSubscribers === 0) {
+      state.disconnect();
+      if (roomSockets.get(roomId) === state) {
+        roomSockets.delete(roomId);
+      }
+    }
+  }
 
   watch(
     isEnabled,
     (enabled) => {
-      if (!import.meta.client) return;
       if (enabled) {
-        state.connect();
+        acquire();
       } else {
-        state.disconnect();
+        release();
       }
     },
     { immediate: true },
   );
 
   onUnmounted(() => {
-    state?.disconnect();
+    release();
   });
 
   return state;

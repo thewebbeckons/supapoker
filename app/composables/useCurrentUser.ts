@@ -9,12 +9,13 @@ export interface CurrentUser {
 export function useCurrentUser() {
   const user = useState<CurrentUser | null>("current-user", () => null);
   const ready = useState("current-user-ready", () => false);
+  const fetchSession = import.meta.server ? useRequestFetch() : $fetch;
 
   const loggedIn = computed(() => Boolean(user.value));
 
   async function refresh() {
     try {
-      const session = await $fetch<{ user: CurrentUser | null }>("/api/session");
+      const session = await fetchSession<{ user: CurrentUser | null }>("/api/session");
       user.value = session.user;
     } catch {
       user.value = null;
