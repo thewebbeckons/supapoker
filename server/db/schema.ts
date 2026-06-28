@@ -52,6 +52,7 @@ export const account = sqliteTable(
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   },
   table => ({
+    providerAccountIdx: uniqueIndex("account_providerId_accountId_idx").on(table.providerId, table.accountId),
     userIdIdx: index("account_userId_idx").on(table.userId),
   }),
 );
@@ -100,18 +101,24 @@ export const roomParticipants = sqliteTable(
   }),
 );
 
-export const stories = sqliteTable("stories", {
-  id: text("id").primaryKey(),
-  roomId: text("room_id").notNull().references(() => rooms.id, { onDelete: "cascade" }),
-  title: text("title").notNull(),
-  status: text("status", { enum: ["pending", "active", "voting", "voted", "completed"] }).notNull().default("pending"),
-  sortOrder: integer("sort_order").notNull().default(0),
-  finalEstimate: real("final_estimate"),
-  voteAverage: real("vote_average"),
-  voteCount: integer("vote_count").notNull().default(0),
-  createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
-});
+export const stories = sqliteTable(
+  "stories",
+  {
+    id: text("id").primaryKey(),
+    roomId: text("room_id").notNull().references(() => rooms.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    status: text("status", { enum: ["pending", "active", "voting", "voted", "completed"] }).notNull().default("pending"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    finalEstimate: real("final_estimate"),
+    voteAverage: real("vote_average"),
+    voteCount: integer("vote_count").notNull().default(0),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  },
+  table => ({
+    roomIdIdx: index("stories_room_id_idx").on(table.roomId),
+  }),
+);
 
 export const storyVoteSnapshots = sqliteTable(
   "story_vote_snapshots",

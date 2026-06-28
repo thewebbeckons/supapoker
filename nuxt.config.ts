@@ -1,7 +1,15 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-declare const process: {
-  env: Record<string, string | undefined>;
-};
+import process from "node:process";
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+
+  if (value === undefined || value.trim() === "") {
+    throw new Error(`Missing required environment variable: ${name}`);
+  }
+
+  return value;
+}
 
 export default defineNuxtConfig({
   compatibilityDate: "2026-06-14",
@@ -22,9 +30,9 @@ export default defineNuxtConfig({
     cache: false,
   },
   runtimeConfig: {
-    betterAuthSecret: process.env.BETTER_AUTH_SECRET || "",
-    githubClientId: process.env.GITHUB_CLIENT_ID || "",
-    githubClientSecret: process.env.GITHUB_CLIENT_SECRET || "",
+    betterAuthSecret: requireEnv("BETTER_AUTH_SECRET"),
+    githubClientId: requireEnv("GITHUB_CLIENT_ID"),
+    githubClientSecret: requireEnv("GITHUB_CLIENT_SECRET"),
     emailFrom: process.env.EMAIL_FROM || "SupaPoker <noreply@example.com>",
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || "",

@@ -1,3 +1,5 @@
+/// <reference types="@cloudflare/workers-types" />
+
 import { DurableObject } from "cloudflare:workers";
 import type { Player, Room, Story, VotesMap } from "~/types/room";
 

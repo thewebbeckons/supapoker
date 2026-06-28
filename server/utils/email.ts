@@ -19,11 +19,14 @@ export async function sendTransactionalEmail(
   const env = getCloudflareEnv(event);
 
   if (!env.EMAIL) {
-    console.info("[email] EMAIL binding missing; skipping send", {
-      to: input.to,
+    console.error("[email] EMAIL binding missing; transactional email not sent", {
       subject: input.subject,
     });
-    return;
+
+    throw createError({
+      statusCode: 500,
+      message: "Email service is not configured.",
+    });
   }
 
   await env.EMAIL.send({

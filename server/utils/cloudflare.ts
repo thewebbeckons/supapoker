@@ -1,4 +1,5 @@
 import type { H3Event } from "h3";
+import type { DurableObjectNamespace } from "@cloudflare/workers-types";
 
 export interface AppEnv {
   ROOM_SESSION?: DurableObjectNamespace;

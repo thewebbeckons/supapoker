@@ -8,6 +8,20 @@
       "when": 1782573496792,
       "tag": "0000_wild_nico_minoru",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1782673707082,
+      "tag": "0001_bright_wendigo",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782673844666,
+      "tag": "0002_huge_ted_forrester",
+      "breakpoints": true
     }
   ]
 }

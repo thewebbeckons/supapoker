@@ -18,7 +18,7 @@ export function createAuth(event: H3Event) {
 
   return betterAuth({
     baseURL: `${getSiteUrl(event)}/api/auth`,
-    secret: config.betterAuthSecret || "development-secret-change-before-production",
+    secret: config.betterAuthSecret,
     database: drizzleAdapter(db, {
       provider: "sqlite",
       schema,

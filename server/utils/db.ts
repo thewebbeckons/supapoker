@@ -1,4 +1,5 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
+import type { DurableObjectStub } from "@cloudflare/workers-types";
 import { db, schema } from "hub:db";
 import type { CurrentUser } from "~/composables/useCurrentUser";
 import type { Player, Room, Story, StoryVoteSnapshot } from "~/types/room";
@@ -16,7 +17,6 @@ export function mapRoom(row: typeof schema.rooms.$inferSelect): Room {
     name: row.name,
     description: row.description,
     adminUserId: row.adminUserId,
-    created_by: row.adminUserId,
     createdAt: toIso(row.createdAt),
     updatedAt: toIso(row.updatedAt),
     created_at: toIso(row.createdAt),

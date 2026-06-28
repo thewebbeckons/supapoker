@@ -29,6 +29,7 @@
     "@cloudflare/workers-types": "^4.20260626.1",
     "@iconify-json/lucide": "^1.2.82",
     "@nuxt/hints": "^1.0.0-alpha.4",
+    "@types/node": "^26.0.1",
     "drizzle-kit": "^0.31.10",
     "vue-tsc": "^3.3.5",
     "wrangler": "^4.100.0"

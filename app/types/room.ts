@@ -7,7 +7,6 @@ export interface Room {
     name: string
     description: string | null
     adminUserId: string
-    created_by: string
     createdAt: string
     updatedAt: string
     created_at: string
