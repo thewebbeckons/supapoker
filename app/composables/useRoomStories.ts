@@ -13,10 +13,20 @@ export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(tru
   );
   const isVoting = computed(() => activeStory.value?.status === "voting");
   const isVoted = computed(() => activeStory.value?.status === "voted");
+  let lastActiveStoryId: string | null = null;
 
   watch(
-    () => activeStory.value?.status,
-    (nextStatus, previousStatus) => {
+    () => activeStory.value ? { id: activeStory.value.id, status: activeStory.value.status } : null,
+    (nextStory, previousStory) => {
+      if (nextStory) {
+        lastActiveStoryId = nextStory.id;
+      }
+
+      const previousStatus = previousStory?.status;
+      const completedStoryId = lastActiveStoryId ?? previousStory?.id;
+      const nextStatus = nextStory?.status
+        ?? stories.value.find(story => story.id === completedStoryId && story.status === "completed")?.status;
+
       if (!nextStatus || !previousStatus || nextStatus === previousStatus) return;
       onStoryStatusChange.value?.(previousStatus, nextStatus);
     },

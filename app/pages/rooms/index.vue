@@ -15,6 +15,7 @@ const { user } = useCurrentUser();
 const toast = useToast();
 const search = ref("");
 const isCreateRoomModalOpen = ref(false);
+const isCreatingRoom = ref(false);
 const newRoomName = ref("");
 const newRoomDescription = ref("");
 
@@ -53,8 +54,9 @@ function openCreateRoomModal() {
 }
 
 async function createRoom() {
-  if (!newRoomName.value.trim() || !user.value) return;
+  if (isCreatingRoom.value || !newRoomName.value.trim() || !user.value) return;
 
+  isCreatingRoom.value = true;
   try {
     const room = await $fetch<{ id: string }>("/api/rooms", {
       method: "POST",
@@ -79,6 +81,8 @@ async function createRoom() {
       description: error?.data?.message ?? "Failed to create room",
       color: "error",
     });
+  } finally {
+    isCreatingRoom.value = false;
   }
 }
 </script>
@@ -169,7 +173,7 @@ async function createRoom() {
           </UFormField>
           <div class="flex justify-end gap-2">
             <UButton label="Cancel" color="neutral" variant="ghost" @click="isCreateRoomModalOpen = false" />
-            <UButton label="Create" color="primary" :disabled="!newRoomName.trim()" @click="createRoom" />
+            <UButton label="Create" color="primary" :loading="isCreatingRoom" :disabled="isCreatingRoom || !newRoomName.trim()" @click="createRoom" />
           </div>
         </div>
       </template>

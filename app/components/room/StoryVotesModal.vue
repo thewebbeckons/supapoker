@@ -21,10 +21,19 @@ const votes = ref<Record<string, string>>({})
 const isLoading = ref(false)
 
 watch(() => props.story, async (story) => {
-    if (!story) return
+    if (!story) {
+        votes.value = {}
+        isLoading.value = false
+        return
+    }
     isLoading.value = true
-    votes.value = await $fetch<Record<string, string>>(`/api/rooms/${story.room_id}/stories/${story.id}/votes`)
-    isLoading.value = false
+    try {
+        votes.value = await $fetch<Record<string, string>>(`/api/rooms/${story.room_id}/stories/${story.id}/votes`)
+    } catch {
+        votes.value = {}
+    } finally {
+        isLoading.value = false
+    }
 })
 </script>
 

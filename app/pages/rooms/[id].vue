@@ -54,13 +54,23 @@ const {
     },
 );
 
-const hasJoinedRoom = computed(() => Boolean(roomAccess.value?.isParticipant));
 const room = computed(() => roomAccess.value?.room ?? null);
+const hasRoomLoadFailed = computed(() => {
+    if (!user.value || roomStatus.value === "idle" || roomStatus.value === "pending") return false;
+
+    return Boolean(roomError.value) || !roomAccess.value || !room.value;
+});
+const hasJoinedRoom = computed(() => Boolean(room.value && roomAccess.value?.isParticipant));
 
 watch(
-    [roomStatus, roomAccess, user],
-    ([status, access, currentUser]) => {
-        if (status !== "success" || !currentUser || !access) return;
+    [roomStatus, roomAccess, hasRoomLoadFailed, user],
+    ([status, access, loadFailed, currentUser]) => {
+        if (!currentUser || status === "idle" || status === "pending") return;
+
+        if (loadFailed || !access) {
+            isJoinModalOpen.value = false;
+            return;
+        }
 
         isJoinModalOpen.value = !access.isParticipant;
     },
@@ -110,12 +120,7 @@ const canJoinRoom = computed(() => {
 });
 
 const showRoomError = computed(() => {
-    if (!hasJoinedRoom.value) return false;
-    if (roomStatus.value === "idle" || roomStatus.value === "pending") {
-        return false;
-    }
-
-    return hasJoinedRoom.value && (Boolean(roomError.value) || !room.value);
+    return hasRoomLoadFailed.value;
 });
 
 const canEdit = computed(() => {

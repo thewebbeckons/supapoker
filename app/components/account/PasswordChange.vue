@@ -23,7 +23,7 @@ async function onPasswordSubmit(payload: FormSubmitEvent<PasswordSchema>) {
     const result = await authClient.changePassword({
       currentPassword: payload.data.currentPassword,
       newPassword: payload.data.password,
-      revokeOtherSessions: false,
+      revokeOtherSessions: true,
     });
 
     if (result.error) throw new Error(result.error.message ?? "Unable to update password.");
