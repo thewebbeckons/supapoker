@@ -29,20 +29,23 @@ const loading = ref(false);
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
   loading.value = true;
-  const resetUrl = new URL("/reset-password", appOrigin);
-  const result = await authClient.requestPasswordReset({
-    email: payload.data.email,
-    redirectTo: resetUrl.toString(),
-  });
-  loading.value = false;
 
-  if (result.error) {
-    toast.add({
-      title: "Error",
-      description: result.error.message ?? "Unable to send reset instructions.",
-      color: "error",
+  try {
+    const resetUrl = new URL("/reset-password", appOrigin);
+    const result = await authClient.requestPasswordReset({
+      email: payload.data.email,
+      redirectTo: resetUrl.toString(),
     });
-  } else {
+
+    if (result.error) {
+      toast.add({
+        title: "Error",
+        description: result.error.message ?? "Unable to send reset instructions.",
+        color: "error",
+      });
+      return;
+    }
+
     toast.add({
       title: "Success",
       description: "Password reset instructions have been sent to your email.",
@@ -55,6 +58,14 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     setTimeout(() => {
       navigateTo("/login");
     }, 3000);
+  } catch (error) {
+    toast.add({
+      title: "Error",
+      description: error instanceof Error ? error.message : "Unable to send reset instructions.",
+      color: "error",
+    });
+  } finally {
+    loading.value = false;
   }
 }
 </script>
