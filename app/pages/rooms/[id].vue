@@ -202,10 +202,6 @@ function onStoryEditSuccess(payload: { id: string; title: string }) {
     }
 }
 
-function onStoryDeleteSuccess() {
-    selectedStory.value = null;
-}
-
 function onViewVotes(story: any) {
     selectedStory.value = story;
     isStoryVotesModalOpen.value = true;
@@ -458,7 +454,6 @@ watch(stories, (nextStories) => {
         <RoomStoryDeleteModal
             v-model="isStoryDeleteModalOpen"
             :story="selectedStory"
-            @success="onStoryDeleteSuccess"
         />
 
         <!-- Story Complete Confirmation Modal -->
