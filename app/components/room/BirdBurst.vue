@@ -14,8 +14,14 @@ interface BirdParticle {
   size: number;
 }
 
+const BURST_COUNT = 5;
+const PARTICLES_PER_BURST = 22;
+const BURST_STAGGER_MS = 180;
+const PARTICLE_ANIMATION_MS = 1050;
+
 const particles = ref<BirdParticle[]>([]);
 let cleanupTimer: ReturnType<typeof setTimeout> | null = null;
+let burstTimers: ReturnType<typeof setTimeout>[] = [];
 
 function clearCleanupTimer() {
   if (!cleanupTimer) return;
@@ -23,27 +29,57 @@ function clearCleanupTimer() {
   cleanupTimer = null;
 }
 
-function burst() {
-  clearCleanupTimer();
+function clearBurstTimers() {
+  for (const timer of burstTimers) {
+    clearTimeout(timer);
+  }
+  burstTimers = [];
+}
+
+function randomBetween(min: number, max: number) {
+  return min + Math.random() * (max - min);
+}
+
+function createBurstParticles(originX: number, originY: number, burstIndex: number) {
   const emojis = ["🐦", "🪽", "🐤", "🐥"];
-  particles.value = Array.from({ length: 34 }, (_, index) => {
-    const angle = (Math.PI * 2 * index) / 34;
-    const distance = 180 + Math.random() * 260;
+
+  return Array.from({ length: PARTICLES_PER_BURST }, (_, index) => {
+    const angle = (Math.PI * 2 * index) / PARTICLES_PER_BURST + randomBetween(-0.18, 0.18);
+    const distance = randomBetween(220, 430);
+
     return {
-      id: crypto.randomUUID(),
-      emoji: emojis[index % emojis.length] ?? "🐦",
-      x: 50 + (Math.random() * 12 - 6),
-      y: 48 + (Math.random() * 10 - 5),
+      id: `${burstIndex}-${index}-${crypto.randomUUID()}`,
+      emoji: emojis[(index + burstIndex) % emojis.length] ?? "🐦",
+      x: originX + randomBetween(-3, 3),
+      y: originY + randomBetween(-3, 3),
       dx: Math.cos(angle) * distance,
-      dy: Math.sin(angle) * distance - 80,
-      rotate: Math.random() * 720 - 360,
-      size: 22 + Math.random() * 18,
+      dy: Math.sin(angle) * distance - randomBetween(40, 110),
+      rotate: randomBetween(-420, 420),
+      size: randomBetween(28, 52),
     };
   });
+}
+
+function burst() {
+  clearCleanupTimer();
+  clearBurstTimers();
+  particles.value = [];
+
+  for (let index = 0; index < BURST_COUNT; index += 1) {
+    const timer = setTimeout(() => {
+      particles.value = [
+        ...particles.value,
+        ...createBurstParticles(randomBetween(15, 85), randomBetween(18, 78), index),
+      ];
+    }, index * BURST_STAGGER_MS);
+
+    burstTimers.push(timer);
+  }
 
   cleanupTimer = setTimeout(() => {
     particles.value = [];
-  }, 1200);
+    burstTimers = [];
+  }, (BURST_COUNT - 1) * BURST_STAGGER_MS + PARTICLE_ANIMATION_MS + 100);
 }
 
 watch(
@@ -56,6 +92,7 @@ watch(
 
 onUnmounted(() => {
   clearCleanupTimer();
+  clearBurstTimers();
 });
 </script>
 
@@ -81,7 +118,7 @@ onUnmounted(() => {
 
 <style scoped>
 .bird-particle {
-  animation: bird-burst 1150ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: bird-burst 1050ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   transform: translate(-50%, -50%);
 }
 
