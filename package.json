@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "cf:deploy": "pnpm build && wrangler --cwd .output deploy",
+    "cf:deploy": "pnpm build && pnpm run cf:deploy:built",
+    "cf:deploy:built": "wrangler --cwd .output deploy",
     "cf:preview": "pnpm build && wrangler --cwd .output dev",
     "db:generate": "nuxt db generate",
     "db:migrate": "nuxt db migrate",

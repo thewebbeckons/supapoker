@@ -56,3 +56,23 @@ pnpm run build
 pnpm run cf:preview
 pnpm run cf:deploy
 ```
+
+## CI/CD
+
+Pushes to `main` run the GitHub Actions production deploy workflow. The workflow installs with pnpm, typechecks, runs D1 migrations, builds the Nuxt app, and deploys the generated Cloudflare Worker output.
+
+Configure these GitHub Actions secrets in the `production` environment or repository:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `BETTER_AUTH_SECRET`
+- `GITHUB_CLIENT_ID`
+- `GITHUB_CLIENT_SECRET`
+
+The workflow maps the Cloudflare secrets to NuxtHub's `NUXT_HUB_CLOUDFLARE_*` variables for D1 migrations.
+
+Optional GitHub Actions variables:
+
+- `NUXT_PUBLIC_SITE_URL` defaults to `https://supapoker.dev`
+- `EMAIL_FROM` defaults to `SupaPoker <noreply@supapoker.dev>`
+- `NUXT_HUB_CLOUDFLARE_DATABASE_ID` defaults to the D1 database ID in `nuxt.config.ts`
