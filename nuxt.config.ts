@@ -21,6 +21,7 @@ export default defineNuxtConfig({
     "@nuxthub/core",
     "@vueuse/nuxt",
     "@nuxt/hints",
+    "nuxt-email-renderer",
   ],
   css: ["~/assets/css/main.css"],
   hub: {
