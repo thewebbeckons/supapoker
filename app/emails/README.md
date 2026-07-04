@@ -1,26 +1,10 @@
-# Supabase Dashboard Email Templates
+# SupaPoker Email Templates
 
-Copy/paste each HTML file into the matching Supabase template:
+Transactional emails are rendered with `nuxt-email-renderer` from Vue components in this directory.
 
-- Confirm sign up -> `confirm-signup.html`
-- Invite user -> `invite-user.html`
-- Magic link -> `magic-link.html`
-- Change email address -> `change-email-address.html`
-- Reset password -> `reset-password.html`
-- Reauthentication -> `reauthentication.html`
+- `ConfirmAccountEmail.vue` is used for Better Auth email verification.
+- `ResetPasswordEmail.vue` is used for Better Auth password resets.
+- `components/EmailLayout.vue` and `components/EmailText.vue` hold the shared email UI.
 
-Suggested subjects:
-
-- Confirm sign up: `Confirm your SupaPoker account`
-- Invite user: `You're invited to SupaPoker`
-- Magic link: `Your SupaPoker magic link`
-- Change email address: `Confirm your new SupaPoker email`
-- Reset password: `Reset your SupaPoker password`
-- Reauthentication: `Confirm your identity on SupaPoker`
-
-Template variables used (Supabase):
-
-- `{{ .ConfirmationURL }}`
-- `{{ .Email }}`
-- `{{ .NewEmail }}`
-- `{{ .Token }}`
+The old static Supabase HTML files are kept only as reference templates. The application sends mail
+through `server/utils/auth.ts` and `server/utils/auth-email.ts`.

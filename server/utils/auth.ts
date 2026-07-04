@@ -34,22 +34,34 @@ export function createAuth(event: H3Event) {
       enabled: true,
       requireEmailVerification: true,
       sendResetPassword: async ({ user, url }) => {
+        const email = await renderAuthEmail("ResetPasswordEmail", {
+          email: user.email,
+          actionUrl: url,
+          appUrl: getSiteUrl(event),
+        });
+
         await sendTransactionalEmail(event, {
           to: user.email,
           subject: "Reset your SupaPoker password",
-          html: `<p>Use this link to reset your SupaPoker password:</p><p><a href="${url}">Reset password</a></p>`,
-          text: `Use this link to reset your SupaPoker password: ${url}`,
+          html: email.html,
+          text: email.text,
         });
       },
     },
     emailVerification: {
       sendOnSignUp: true,
       sendVerificationEmail: async ({ user, url }) => {
+        const email = await renderAuthEmail("ConfirmAccountEmail", {
+          email: user.email,
+          actionUrl: url,
+          appUrl: getSiteUrl(event),
+        });
+
         await sendTransactionalEmail(event, {
           to: user.email,
           subject: "Confirm your SupaPoker account",
-          html: `<p>Use this link to confirm your SupaPoker account:</p><p><a href="${url}">Confirm account</a></p>`,
-          text: `Use this link to confirm your SupaPoker account: ${url}`,
+          html: email.html,
+          text: email.text,
         });
       },
     },
