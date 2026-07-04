@@ -81,6 +81,15 @@ function copyRoomUrl() {
                         <div class="flex items-center gap-1.5">
                             <span class="text-sm font-medium text-neutral-900 dark:text-white min-h-5">{{
                                 player.name }}</span>
+                            <UBadge
+                                v-if="player.isModerator"
+                                size="sm"
+                                color="primary"
+                                variant="soft"
+                                icon="i-lucide-shield-check"
+                                label="Admin"
+                                class="h-5"
+                            />
                         </div>
                     </div>
                     <UIcon v-if="playerHasVoted(player.id)" name="i-lucide-circle-check"
