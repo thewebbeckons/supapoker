@@ -54,13 +54,13 @@ const {
     },
 );
 
-const room = computed(() => roomAccess.value?.room ?? null);
+const initialRoom = computed(() => roomAccess.value?.room ?? null);
 const hasRoomLoadFailed = computed(() => {
     if (!user.value || roomStatus.value === "idle" || roomStatus.value === "pending") return false;
 
-    return Boolean(roomError.value) || !roomAccess.value || !room.value;
+    return Boolean(roomError.value) || !roomAccess.value || !initialRoom.value;
 });
-const hasJoinedRoom = computed(() => Boolean(room.value && roomAccess.value?.isParticipant));
+const hasJoinedRoom = computed(() => Boolean(initialRoom.value && roomAccess.value?.isParticipant));
 
 watch(
     [roomStatus, roomAccess, hasRoomLoadFailed, user],
@@ -123,6 +123,9 @@ const showRoomError = computed(() => {
     return hasRoomLoadFailed.value;
 });
 
+const roomSocket = useRoomSocket(roomId, hasJoinedRoom);
+const room = computed(() => roomSocket.room.value ?? initialRoom.value);
+
 const canEdit = computed(() => {
     return !!(
         user.value &&
@@ -144,8 +147,6 @@ const {
     stopVote,
     completeStory,
     refreshStories,
-    updateStoryLocally,
-    removeStoryLocally,
     onStoryStatusChange,
 } = useRoomStories(roomId, hasJoinedRoom);
 
@@ -195,12 +196,9 @@ function onDeleteStory(story: any) {
 }
 
 function onStoryEditSuccess(payload: { id: string; title: string }) {
-    updateStoryLocally(payload.id, { title: payload.title });
-}
-
-function onStoryDeleteSuccess() {
-    if (selectedStory.value) {
-        removeStoryLocally(selectedStory.value.id);
+    const latestStory = stories.value.find((story) => story.id === payload.id);
+    if (latestStory) {
+        selectedStory.value = latestStory;
     }
 }
 
@@ -208,6 +206,21 @@ function onViewVotes(story: any) {
     selectedStory.value = story;
     isStoryVotesModalOpen.value = true;
 }
+
+watch(stories, (nextStories) => {
+    if (!selectedStory.value) return;
+
+    const latestStory = nextStories.find((story) => story.id === selectedStory.value.id);
+    if (latestStory) {
+        selectedStory.value = latestStory;
+        return;
+    }
+
+    isStoryEditModalOpen.value = false;
+    isStoryDeleteModalOpen.value = false;
+    isStoryVotesModalOpen.value = false;
+    selectedStory.value = null;
+});
 </script>
 
 <template>
@@ -441,7 +454,6 @@ function onViewVotes(story: any) {
         <RoomStoryDeleteModal
             v-model="isStoryDeleteModalOpen"
             :story="selectedStory"
-            @success="onStoryDeleteSuccess"
         />
 
         <!-- Story Complete Confirmation Modal -->

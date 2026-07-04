@@ -146,8 +146,10 @@ export async function listRoomPlayers(roomId: string, adminUserId: string): Prom
     .where(eq(schema.roomParticipants.roomId, roomId))
     .orderBy(asc(schema.roomParticipants.joinedAt));
 
-  const userIds = participants.map(participant => participant.userId);
-  if (userIds.length === 0) return [];
+  const userIds = Array.from(new Set([
+    adminUserId,
+    ...participants.map(participant => participant.userId),
+  ]));
 
   const profiles = await db
     .select()
