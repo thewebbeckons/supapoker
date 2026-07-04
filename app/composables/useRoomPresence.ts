@@ -8,10 +8,16 @@ export function useRoomPresence(
 
   async function pokeUsers() {
     try {
+      const previousPokeId = socket.lastPokeId.value;
+
       await $fetch(`/api/rooms/${roomId}/actions`, {
         method: "POST",
         body: { type: "poke" },
       });
+
+      if (socket.lastPokeId.value === previousPokeId) {
+        socket.lastPokeId.value = crypto.randomUUID();
+      }
     } catch (error: any) {
       toast.add({
         title: "Unable to poke users",

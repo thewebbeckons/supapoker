@@ -143,6 +143,7 @@ const {
     startVote,
     stopVote,
     completeStory,
+    refreshStories,
     updateStoryLocally,
     removeStoryLocally,
     onStoryStatusChange,
@@ -425,6 +426,7 @@ function onViewVotes(story: any) {
         <RoomNewStoryModal
             v-model="isNewStoryModalOpen"
             :room="room ?? null"
+            @success="refreshStories"
         />
 
         <!-- Delete Room Modal -->

@@ -24,9 +24,19 @@ export default defineNuxtConfig({
   ],
   css: ["~/assets/css/main.css"],
   hub: {
-    db: "sqlite",
+    db: {
+      dialect: "sqlite",
+      driver: "d1",
+      connection: {
+        databaseId: "c1fc4e89-5177-47e8-b82b-2d1439d80425"
+      }
+    },
     kv: false,
-    blob: true,
+    blob: {
+      driver: "cloudflare-r2",
+      binding: "BLOB",
+      bucketName: "supapoker-avatars"
+    },
     cache: false,
   },
   runtimeConfig: {

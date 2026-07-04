@@ -1,25 +1,38 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "supapoker",
-  "compatibility_date": "2026-06-14",
-  "compatibility_flags": ["nodejs_compat"],
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "ROOM_SESSION",
-        "class_name": "RoomSession"
-      }
-    ]
-  },
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": ["RoomSession"]
-    }
-  ],
-  "send_email": [
-    {
-      "name": "EMAIL"
-    }
-  ]
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "supapoker",
+	"compatibility_date": "2026-06-14",
+	"compatibility_flags": ["nodejs_compat"],
+	"durable_objects": {
+		"bindings": [
+			{
+				"name": "ROOM_SESSION",
+				"class_name": "RoomSession",
+			},
+		],
+	},
+	"migrations": [
+		{
+			"tag": "v1",
+			"new_sqlite_classes": ["RoomSession"],
+		},
+	],
+	"send_email": [
+		{
+			"name": "EMAIL",
+		},
+	],
+	"vars": {
+		"NUXT_PUBLIC_SITE_URL": "https://supapoker.dev",
+		"EMAIL_FROM": "SupaPoker <noreply@supapoker.dev>",
+	},
+	"observability": {
+		"logs": {
+			"enabled": true,
+			"invocation_logs": true,
+		},
+		"traces": {
+			"enabled": true,
+		},
+	},
 }

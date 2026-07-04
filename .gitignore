@@ -27,3 +27,4 @@ logs
 .dev.vars
 .dev.vars.*
 !.dev.vars.example
+cloudflare-deployment-guide.html

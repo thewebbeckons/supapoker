@@ -98,6 +98,7 @@ export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(tru
     startVote,
     stopVote,
     completeStory,
+    refreshStories: fetchStories,
     updateStoryLocally,
     removeStoryLocally,
     onStoryStatusChange,

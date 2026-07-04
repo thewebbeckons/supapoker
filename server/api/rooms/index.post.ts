@@ -12,8 +12,8 @@ export default defineEventHandler(async (event) => {
   const now = new Date();
   const roomId = crypto.randomUUID();
 
-  const room = await db.transaction(async (tx) => {
-    const [createdRoom] = await tx
+  const [createdRooms] = await db.batch([
+    db
       .insert(schema.rooms)
       .values({
         id: roomId,
@@ -23,20 +23,19 @@ export default defineEventHandler(async (event) => {
         createdAt: now,
         updatedAt: now,
       })
-      .returning();
-
-    if (!createdRoom) {
-      throw createError({ statusCode: 500, message: "Unable to create room." });
-    }
-
-    await tx.insert(schema.roomParticipants).values({
+      .returning(),
+    db.insert(schema.roomParticipants).values({
       roomId,
       userId: user.id,
       joinedAt: now,
-    });
+    }),
+  ]);
 
-    return createdRoom;
-  });
+  const [room] = createdRooms;
+
+  if (!room) {
+    throw createError({ statusCode: 500, message: "Unable to create room." });
+  }
 
   await syncRoomSession(event, roomId);
 
