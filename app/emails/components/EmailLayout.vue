@@ -39,23 +39,6 @@ const mastheadStyle = {
   borderBottom: "4px solid #2563eb",
 };
 
-const logoCellStyle = {
-  width: "36px",
-  verticalAlign: "middle",
-};
-
-const markStyle = {
-  width: "32px",
-  height: "32px",
-  backgroundColor: "#2563eb",
-  color: "#ffffff",
-  fontFamily: fontStack,
-  fontSize: "12px",
-  fontWeight: "800",
-  lineHeight: "32px",
-  textAlign: "center" as const,
-};
-
 const brandStyle = {
   margin: "0",
   color: "#ffffff",
@@ -170,11 +153,6 @@ const footerStyle = {
                 <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                   <tbody>
                     <tr>
-                      <td :style="logoCellStyle">
-                        <div :style="markStyle">
-                          SP
-                        </div>
-                      </td>
                       <td>
                         <p :style="brandStyle">
                           SupaPoker
