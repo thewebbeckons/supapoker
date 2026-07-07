@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-const { loggedIn, signOut } = useCurrentUser()
+const { user, loggedIn, signOut } = useCurrentUser()
 const isMounted = ref(false)
 
 onMounted(() => {
@@ -19,6 +19,43 @@ const items = [
     },
 ]
 
+const { data: profile } = useAsyncData(
+    'header-profile',
+    async () => {
+        if (!user.value) return null
+
+        return $fetch<{
+            name: string
+            email: string
+            avatar: string | null
+        }>('/api/profile')
+    },
+    {
+        watch: [user],
+        default: () => null,
+    },
+)
+
+const userName = computed(() => profile.value?.name || user.value?.name || user.value?.email || 'Account')
+const userEmail = computed(() => profile.value?.email || user.value?.email || '')
+const userAvatar = computed(() => ({
+    src: profile.value?.avatar || user.value?.image || undefined,
+    alt: userName.value,
+}))
+
+const userMenuItems = computed(() => [
+    [{
+        label: 'Account settings',
+        icon: 'i-lucide-settings',
+        to: '/account',
+    }],
+    [{
+        label: 'Log out',
+        icon: 'i-lucide-log-out',
+        color: 'neutral' as const,
+        onSelect: logout,
+    }],
+])
 
 </script>
 
@@ -46,10 +83,41 @@ const items = [
                 <UButton label="Login" to="/login" variant="outline" color="neutral" />
                 <UButton label="Sign up" to="/signup" color="primary" />
             </div>
-            <div v-else class="flex items-center gap-2">
-                <UButton icon="i-lucide-user" to="/account" color="neutral" variant="ghost" />
-                <UButton label="Logout" color="neutral" variant="ghost" icon="i-lucide-log-out" @click="logout" />
-            </div>
+            <UDropdownMenu
+                v-else
+                :items="userMenuItems"
+                :content="{ align: 'end', side: 'bottom', sideOffset: 10 }"
+                arrow
+                :ui="{ content: 'w-72', item: 'h-9' }"
+            >
+                <UButton
+                    color="neutral"
+                    variant="ghost"
+                    class="h-10 gap-2 px-2"
+                    trailing-icon="i-lucide-chevrons-up-down"
+                >
+                    <UAvatar
+                        :src="userAvatar.src"
+                        :alt="userAvatar.alt"
+                        size="sm"
+                    />
+                    <span class="hidden max-w-36 truncate text-sm font-medium sm:inline">
+                        {{ userName }}
+                    </span>
+                </UButton>
+
+                <template #content-top>
+                    <div class="px-2 py-2">
+                        <UUser
+                            :name="userName"
+                            :description="userEmail"
+                            :avatar="userAvatar"
+                            size="md"
+                        />
+                    </div>
+                    <USeparator />
+                </template>
+            </UDropdownMenu>
         </template>
     </UHeader>
 </template>

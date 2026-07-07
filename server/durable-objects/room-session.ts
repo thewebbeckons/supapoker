@@ -102,7 +102,7 @@ export class RoomSession extends DurableObject<Env> {
       return new Response("Expected websocket", { status: 426 });
     }
 
-    await this.syncState(state, false);
+    await this.syncState(this.withConnectedPlayer(state, user), false);
 
     const pair = new WebSocketPair();
     const client = pair[0];
@@ -326,6 +326,25 @@ export class RoomSession extends DurableObject<Env> {
       ...player,
       isOnline: onlineIds.has(player.id),
     }));
+  }
+
+  private withConnectedPlayer(state: RoomState, user: ConnectedUser): RoomState {
+    const existingPlayer = state.players.find(player => player.id === user.id);
+    if (existingPlayer) return state;
+
+    return {
+      ...state,
+      players: [
+        ...state.players,
+        {
+          id: user.id,
+          name: user.name,
+          avatar: user.avatar,
+          isModerator: state.room?.adminUserId === user.id,
+          isOnline: false,
+        },
+      ],
+    };
   }
 
   private broadcastPresence() {

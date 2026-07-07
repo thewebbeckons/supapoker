@@ -1,9 +1,12 @@
+import type { Player } from "~/types/room";
+
 export function useRoomPresence(
   roomId: string,
-  _roomCreatorId: ComputedRef<string | null | undefined> | Ref<string | null | undefined>,
+  roomCreatorId: ComputedRef<string | null | undefined> | Ref<string | null | undefined>,
   isEnabled: Ref<boolean> = ref(true),
 ) {
   const socket = useRoomSocket(roomId, isEnabled);
+  const { user } = useCurrentUser();
   const toast = useToast();
 
   async function pokeUsers() {
@@ -27,12 +30,34 @@ export function useRoomPresence(
     }
   }
 
+  const players = computed<Player[]>(() => {
+    const creatorId = roomCreatorId.value;
+    if (!creatorId || socket.players.value.some(player => player.id === creatorId)) {
+      return socket.players.value;
+    }
+
+    if (user.value?.id !== creatorId) {
+      return socket.players.value;
+    }
+
+    return [
+      {
+        id: user.value.id,
+        name: user.value.name || user.value.email,
+        avatar: user.value.image ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.value.id}`,
+        isModerator: true,
+        isOnline: true,
+      },
+      ...socket.players.value,
+    ];
+  });
+
   const onlineUsers = computed(() =>
-    new Set(socket.players.value.filter(player => player.isOnline).map(player => player.id)),
+    new Set(players.value.filter(player => player.isOnline).map(player => player.id)),
   );
 
   return {
-    players: socket.players,
+    players,
     onlineUsers,
     pokeUsers,
     lastPokeId: socket.lastPokeId,
