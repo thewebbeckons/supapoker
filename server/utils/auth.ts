@@ -4,10 +4,32 @@ import { toWebRequest, type H3Event } from "h3";
 import { db } from "hub:db";
 import * as schema from "../db/schema";
 
+function getRequestOrigin(event: H3Event) {
+  const request = toWebRequest(event);
+  return new URL(request.url).origin;
+}
+
+function isLocalOrigin(origin: string) {
+  const { hostname } = new URL(origin);
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "[::1]"
+  );
+}
+
 function getSiteUrl(event: H3Event) {
   const config = useRuntimeConfig(event);
   const configured = config.public.siteUrl;
-  if (configured) return configured;
+  const requestOrigin = getRequestOrigin(event);
+
+  if (isLocalOrigin(requestOrigin)) {
+    return requestOrigin;
+  }
+
+  if (configured) {
+    return new URL(configured).origin;
+  }
 
   if (!import.meta.dev) {
     throw createError({
@@ -16,8 +38,7 @@ function getSiteUrl(event: H3Event) {
     });
   }
 
-  const request = toWebRequest(event);
-  return new URL(request.url).origin;
+  return requestOrigin;
 }
 
 export function createAuth(event: H3Event) {

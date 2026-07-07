@@ -132,47 +132,31 @@ export class RoomSession extends DurableObject<Env> {
   }
 
   async startVote(storyId: string) {
-    this.ctx.storage.sql.exec("DELETE FROM votes WHERE story_id = ?", storyId);
-    this.ctx.storage.sql.exec("DELETE FROM revealed_votes WHERE story_id = ?", storyId);
+    await this.resetVotes(storyId);
     await this.updateStoryStatus(storyId, "voting");
     this.broadcast(await this.buildStateMessage());
   }
 
   async stopVote(storyId: string) {
-    const votes = this.readVotes(storyId);
-    this.ctx.storage.sql.exec("DELETE FROM revealed_votes WHERE story_id = ?", storyId);
-    for (const [userId, voteValue] of Object.entries(votes)) {
-      this.ctx.storage.sql.exec(
-        "INSERT OR REPLACE INTO revealed_votes (story_id, user_id, vote_value) VALUES (?, ?, ?)",
-        storyId,
-        userId,
-        voteValue,
-      );
-    }
+    const result = await this.revealVotes(storyId);
 
     await this.updateStoryStatus(storyId, "voted");
     this.broadcast(await this.buildStateMessage(true));
 
-    return {
-      votes,
-      ...summarizeVotes(votes),
-    };
+    return result;
   }
 
   async completeStory(storyId: string) {
-    const revealedVotes = this.readRevealedVotes(storyId);
-    const votes = Object.keys(revealedVotes).length > 0 ? revealedVotes : this.readVotes(storyId);
+    const result = this.getVoteResult(storyId);
 
     await this.updateStoryStatus(storyId, "completed");
     this.broadcast(await this.buildStateMessage(true));
 
-    return {
-      votes,
-      ...summarizeVotes(votes),
-    };
+    return result;
   }
 
   async setActiveStory(storyId: string) {
+    await this.resetVotes(storyId);
     const state = await this.readState();
     state.stories = state.stories.map(story => {
       if (story.id === storyId) return { ...story, status: "active" };
@@ -184,9 +168,60 @@ export class RoomSession extends DurableObject<Env> {
     await this.syncState(state);
   }
 
+  async resetVotes(storyId: string) {
+    this.ctx.storage.sql.exec("DELETE FROM votes WHERE story_id = ?", storyId);
+    this.ctx.storage.sql.exec("DELETE FROM revealed_votes WHERE story_id = ?", storyId);
+  }
+
+  async getVoteResult(storyId: string) {
+    const revealedVotes = this.readRevealedVotes(storyId);
+    const votes = Object.keys(revealedVotes).length > 0 ? revealedVotes : this.readVotes(storyId);
+
+    return {
+      votes,
+      ...summarizeVotes(votes),
+    };
+  }
+
+  async revealVotes(storyId: string) {
+    const votes = this.readVotes(storyId);
+    this.ctx.storage.sql.exec("DELETE FROM revealed_votes WHERE story_id = ?", storyId);
+    for (const [userId, voteValue] of Object.entries(votes)) {
+      this.ctx.storage.sql.exec(
+        "INSERT OR REPLACE INTO revealed_votes (story_id, user_id, vote_value) VALUES (?, ?, ?)",
+        storyId,
+        userId,
+        voteValue,
+      );
+    }
+
+    return {
+      votes,
+      ...summarizeVotes(votes),
+    };
+  }
+
+  async submitVote(storyId: string, userId: string, voteValue: string) {
+    const state = await this.readState();
+    const story = state.stories.find(story => story.id === storyId);
+    if (story?.status !== "voting") {
+      throw new Error("Story is not accepting votes.");
+    }
+
+    this.ctx.storage.sql.exec(
+      "INSERT OR REPLACE INTO votes (story_id, user_id, vote_value) VALUES (?, ?, ?)",
+      storyId,
+      userId,
+      voteValue,
+    );
+
+    this.broadcast(await this.buildStateMessage());
+    return { ok: true };
+  }
+
   async deleteRoom() {
     this.broadcast({ type: "room_deleted" });
-    for (const socket of this.sockets.keys()) {
+    for (const socket of this.connectedSockets()) {
       socket.close(1000, "Room deleted");
     }
   }
@@ -210,19 +245,17 @@ export class RoomSession extends DurableObject<Env> {
       return;
     }
 
+    if (parsed.type === "refresh_state") {
+      this.broadcast(await this.buildStateMessage());
+      return;
+    }
+
     if (parsed.type === "vote" && parsed.value) {
       const state = await this.readState();
       const activeStory = state.stories.find(story => story.status === "voting");
       if (!activeStory) return;
 
-      this.ctx.storage.sql.exec(
-        "INSERT OR REPLACE INTO votes (story_id, user_id, vote_value) VALUES (?, ?, ?)",
-        activeStory.id,
-        user.id,
-        parsed.value,
-      );
-
-      this.broadcast(await this.buildStateMessage());
+      await this.submitVote(activeStory.id, user.id, parsed.value);
     }
 
   }
@@ -272,7 +305,7 @@ export class RoomSession extends DurableObject<Env> {
     const state = await this.readState();
     const activeStory = state.stories.find(story => ["active", "voting", "voted"].includes(story.status));
     const shouldRevealVotes = revealVotes || activeStory?.status === "voted" || activeStory?.status === "completed";
-    const votes = activeStory
+    const votes = activeStory && activeStory.status !== "active"
       ? shouldRevealVotes
         ? this.readVotes(activeStory.id)
         : Object.fromEntries(Object.keys(this.readVotes(activeStory.id)).map(userId => [userId, "__voted__"]))
@@ -288,7 +321,7 @@ export class RoomSession extends DurableObject<Env> {
   }
 
   private withOnlineState(players: Player[]) {
-    const onlineIds = new Set([...this.sockets.values()].map(user => user.id));
+    const onlineIds = new Set(this.connectedUsers().map(user => user.id));
     return players.map(player => ({
       ...player,
       isOnline: onlineIds.has(player.id),
@@ -306,12 +339,31 @@ export class RoomSession extends DurableObject<Env> {
 
   private broadcast(payload: unknown) {
     const message = JSON.stringify(payload);
-    for (const socket of this.sockets.keys()) {
+    for (const socket of this.connectedSockets()) {
       try {
         socket.send(message);
       } catch {
         this.sockets.delete(socket);
       }
     }
+  }
+
+  private connectedSockets() {
+    const sockets = new Set([...this.sockets.keys(), ...this.ctx.getWebSockets()]);
+    for (const socket of sockets) {
+      if (this.sockets.has(socket)) continue;
+
+      const user = socket.deserializeAttachment() as ConnectedUser | null;
+      if (user?.id) {
+        this.sockets.set(socket, user);
+      }
+    }
+    return sockets;
+  }
+
+  private connectedUsers() {
+    return [...this.connectedSockets()]
+      .map(socket => this.sockets.get(socket) ?? socket.deserializeAttachment() as ConnectedUser | null)
+      .filter((user): user is ConnectedUser => Boolean(user?.id));
   }
 }

@@ -48,8 +48,8 @@ export default defineEventHandler(async (event) => {
       .update(schema.stories)
       .set({ status: "active", updatedAt: now })
       .where(and(eq(schema.stories.id, body.storyId), eq(schema.stories.roomId, roomId)));
+    await stub.resetVotes(body.storyId);
     await syncRoomSession(event, roomId);
-    await stub.setActiveStory(body.storyId);
     return { ok: true };
   }
 
@@ -62,8 +62,8 @@ export default defineEventHandler(async (event) => {
       .update(schema.stories)
       .set({ status: "voting", updatedAt: now })
       .where(and(eq(schema.stories.id, body.storyId), eq(schema.stories.roomId, roomId)));
+    await stub.resetVotes(body.storyId);
     await syncRoomSession(event, roomId);
-    await stub.startVote(body.storyId);
     return { ok: true };
   }
 
@@ -72,7 +72,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: "Only voting stories can stop voting." });
     }
 
-    const result = await stub.stopVote(body.storyId);
+    const result = await stub.revealVotes(body.storyId);
     await db
       .update(schema.stories)
       .set({
@@ -82,6 +82,21 @@ export default defineEventHandler(async (event) => {
         updatedAt: now,
       })
       .where(and(eq(schema.stories.id, body.storyId), eq(schema.stories.roomId, roomId)));
+
+    await db
+      .delete(schema.storyVoteSnapshots)
+      .where(eq(schema.storyVoteSnapshots.storyId, body.storyId));
+
+    const snapshotRows = Object.entries(result.votes).map(([voterId, voteValue]) => ({
+      storyId: body.storyId,
+      userId: voterId,
+      voteValue: String(voteValue),
+      createdAt: now,
+    }));
+    if (snapshotRows.length > 0) {
+      await db.insert(schema.storyVoteSnapshots).values(snapshotRows);
+    }
+
     await syncRoomSession(event, roomId);
     return result;
   }
@@ -90,7 +105,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "Only voted stories can be completed." });
   }
 
-  const result = await stub.completeStory(body.storyId);
+  const result = await stub.getVoteResult(body.storyId);
   await db
     .update(schema.stories)
     .set({

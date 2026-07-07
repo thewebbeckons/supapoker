@@ -1,5 +1,5 @@
 BETTER_AUTH_SECRET=
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
-NUXT_PUBLIC_SITE_URL=http://localhost:3000
+NUXT_PUBLIC_SITE_URL=http://localhost:8787
 EMAIL_FROM=SupaPoker <noreply@example.com>

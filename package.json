@@ -5,6 +5,7 @@
   "scripts": {
     "build": "nuxt build",
     "cf:deploy": "pnpm build && wrangler --cwd .output deploy",
+    "cf:local": "pnpm build && CI=true wrangler d1 migrations apply DB --local --config .output/server/wrangler.json --persist-to .wrangler/state && wrangler dev --config .output/server/wrangler.json --persist-to .wrangler/state",
     "cf:preview": "pnpm build && wrangler --cwd .output dev",
     "db:generate": "nuxt db generate",
     "db:migrate": "nuxt db migrate",

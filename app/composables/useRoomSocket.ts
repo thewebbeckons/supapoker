@@ -63,7 +63,7 @@ function createRoomSocket(roomId: string): SharedRoomSocketState {
   }
 
   function connect() {
-    if (!import.meta.client) return;
+    if (typeof window === "undefined") return;
     if (socket && (socket.readyState === WebSocket.CONNECTING || socket.readyState === WebSocket.OPEN)) return;
 
     shouldReconnect = true;
@@ -140,7 +140,7 @@ export function useRoomSocket(roomId: string, isEnabled: Ref<boolean> = ref(true
   let isAcquired = false;
 
   function acquire() {
-    if (!import.meta.client || isAcquired || !state) return;
+    if (typeof window === "undefined" || isAcquired || !state) return;
     if (!roomSockets.has(roomId)) {
       roomSockets.set(roomId, state);
     }
@@ -150,7 +150,7 @@ export function useRoomSocket(roomId: string, isEnabled: Ref<boolean> = ref(true
   }
 
   function release() {
-    if (!import.meta.client || !isAcquired || !state) return;
+    if (typeof window === "undefined" || !isAcquired || !state) return;
 
     isAcquired = false;
     state.activeSubscribers = Math.max(0, state.activeSubscribers - 1);
