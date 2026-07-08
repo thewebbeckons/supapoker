@@ -1,4 +1,4 @@
-import type { Player } from "~/types/room";
+import type { Player, Profile } from "~/types/room";
 
 export function useRoomPresence(
   roomId: string,
@@ -8,6 +8,17 @@ export function useRoomPresence(
   const socket = useRoomSocket(roomId, isEnabled);
   const { user } = useCurrentUser();
   const toast = useToast();
+  const { data: profile } = useAsyncData(
+    "room-presence-profile",
+    async () => {
+      if (!isEnabled.value || !user.value) return null;
+      return await $fetch<Profile>("/api/profile");
+    },
+    {
+      watch: [isEnabled, user],
+      default: () => null,
+    },
+  );
 
   async function pokeUsers() {
     try {
@@ -43,8 +54,8 @@ export function useRoomPresence(
     return [
       {
         id: user.value.id,
-        name: user.value.name || user.value.email,
-        avatar: user.value.image ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.value.id}`,
+        name: profile.value?.name || user.value.name || user.value.email,
+        avatar: profile.value?.avatar || user.value.image || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.value.id}`,
         isModerator: true,
         isOnline: true,
       },

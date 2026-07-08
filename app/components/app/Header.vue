@@ -52,7 +52,7 @@ const userMenuItems = computed(() => [
     [{
         label: 'Log out',
         icon: 'i-lucide-log-out',
-        color: 'neutral' as const,
+        color: 'error' as const,
         onSelect: logout,
     }],
 ])
@@ -118,6 +118,53 @@ const userMenuItems = computed(() => [
                     <USeparator />
                 </template>
             </UDropdownMenu>
+        </template>
+        <template #body>
+            <div class="flex flex-col gap-4">
+                <UNavigationMenu
+                    v-if="isMounted && loggedIn"
+                    :items="items"
+                    orientation="vertical"
+                    class="w-full"
+                />
+
+                <div v-if="!isMounted" class="grid gap-2">
+                    <USkeleton class="h-10 w-full" />
+                    <USkeleton class="h-10 w-full" />
+                </div>
+                <div v-else-if="!loggedIn" class="grid gap-2">
+                    <UButton label="Login" to="/login" variant="outline" color="neutral" block />
+                    <UButton label="Sign up" to="/signup" color="primary" block />
+                </div>
+                <div v-else class="grid gap-2">
+                    <UUser
+                        :name="userName"
+                        :description="userEmail"
+                        :avatar="userAvatar"
+                        size="md"
+                        class="px-2 py-1"
+                    />
+                    <USeparator />
+                    <UButton
+                        label="Account settings"
+                        icon="i-lucide-settings"
+                        to="/account"
+                        color="neutral"
+                        variant="ghost"
+                        block
+                        class="justify-start"
+                    />
+                    <UButton
+                        label="Log out"
+                        icon="i-lucide-log-out"
+                        color="error"
+                        variant="ghost"
+                        block
+                        class="justify-start"
+                        @click="logout"
+                    />
+                </div>
+            </div>
         </template>
     </UHeader>
 </template>
