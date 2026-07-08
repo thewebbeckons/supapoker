@@ -25,11 +25,18 @@ const isOpen = computed({
     set: (value) => emit('update:modelValue', value)
 })
 
-watch(() => props.story, (val) => {
-    if (val) {
-        titleInput.value = val.title
-    }
-})
+watch(
+    [() => props.modelValue, () => props.story?.id],
+    ([open]) => {
+        if (!open || !props.story) {
+            titleInput.value = ''
+            return
+        }
+
+        titleInput.value = props.story.title
+    },
+    { immediate: true },
+)
 
 async function updateStory() {
     if (!titleInput.value.trim() || !props.story) return

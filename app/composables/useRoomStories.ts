@@ -52,7 +52,6 @@ export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(tru
   const isStoryActionPending = computed(() => pendingStoryAction.value !== null);
   const pendingStoryActionType = computed(() => pendingStoryAction.value?.type ?? null);
   let lastActiveStoryId: string | null = null;
-  let refreshTimer: ReturnType<typeof setInterval> | null = null;
   let nextFetchRequestId = 0;
   let latestAppliedFetchRequestId = 0;
 
@@ -93,12 +92,6 @@ export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(tru
     }
   }
 
-  function requestRealtimeRefresh(attempts = 10) {
-    if (socket.send({ type: "refresh_state" }) || attempts <= 1) return;
-
-    setTimeout(() => requestRealtimeRefresh(attempts - 1), 100);
-  }
-
   async function runAction(
     type: StoryActionType,
     storyId: string,
@@ -119,7 +112,6 @@ export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(tru
         method: "POST",
         body: { type, storyId },
       });
-      requestRealtimeRefresh();
       await fetchStories();
     } catch (error: any) {
       if (pendingStoryAction.value?.id === actionId) {
@@ -174,31 +166,14 @@ export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(tru
     }
   });
 
-  function stopFallbackRefresh() {
-    if (!refreshTimer) return;
-    clearInterval(refreshTimer);
-    refreshTimer = null;
-  }
-
   watch(isEnabled, (enabled) => {
-    stopFallbackRefresh();
     if (!enabled) {
       sourceStories.value = [];
       return;
     }
 
     void fetchStories();
-
-    if (typeof window !== "undefined") {
-      refreshTimer = setInterval(() => {
-        void fetchStories();
-      }, 1000);
-    }
   }, { immediate: true });
-
-  onUnmounted(() => {
-    stopFallbackRefresh();
-  });
 
   return {
     stories,
