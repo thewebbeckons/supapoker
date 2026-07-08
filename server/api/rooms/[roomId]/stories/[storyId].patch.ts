@@ -14,11 +14,16 @@ export default defineEventHandler(async (event) => {
 
   await requireRoomAdmin(roomId, user.id);
   const body = await readValidatedBody(event, updateStorySchema.parse);
-  const [story] = await db
+  const now = new Date();
+
+  await db
     .update(schema.stories)
-    .set({ title: body.title.trim(), updatedAt: new Date() })
-    .where(and(eq(schema.stories.id, storyId), eq(schema.stories.roomId, roomId)))
-    .returning();
+    .set({ title: body.title.trim(), updatedAt: now })
+    .where(and(eq(schema.stories.id, storyId), eq(schema.stories.roomId, roomId)));
+
+  const story = await db.query.stories.findFirst({
+    where: and(eq(schema.stories.id, storyId), eq(schema.stories.roomId, roomId)),
+  });
 
   if (!story) {
     throw createError({ statusCode: 404, message: "Story not found." });

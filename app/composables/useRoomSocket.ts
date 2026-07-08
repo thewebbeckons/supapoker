@@ -18,6 +18,37 @@ type SharedRoomSocketState = RoomSocketState & {
 };
 
 const roomSockets = new Map<string, SharedRoomSocketState>();
+const STORY_FLOW_STATUSES = new Set(["active", "voting", "voted"]);
+
+function storyUpdatedAtValue(story: Story) {
+  return Date.parse(story.updatedAt || story.updated_at || "") || 0;
+}
+
+function isFlowStory(story: Story) {
+  return STORY_FLOW_STATUSES.has(story.status);
+}
+
+function mergeStories(currentStories: Story[], incomingStories: Story[]) {
+  const currentById = new Map(currentStories.map(story => [story.id, story]));
+  let ignoredStaleFlowStory = false;
+
+  const stories = incomingStories.map((incomingStory) => {
+    const currentStory = currentById.get(incomingStory.id);
+    if (!currentStory) return incomingStory;
+
+    if (storyUpdatedAtValue(currentStory) > storyUpdatedAtValue(incomingStory)) {
+      ignoredStaleFlowStory ||= isFlowStory(currentStory) || isFlowStory(incomingStory);
+      return currentStory;
+    }
+
+    return incomingStory;
+  });
+
+  return {
+    stories,
+    ignoredStaleFlowStory,
+  };
+}
 
 function createRoomSocket(roomId: string): SharedRoomSocketState {
   const room = ref<Room | null>(null);
@@ -43,10 +74,15 @@ function createRoomSocket(roomId: string): SharedRoomSocketState {
 
   function applyMessage(message: any) {
     if (message.type === "state") {
+      const incomingStories = message.stories ?? [];
+      const merged = mergeStories(stories.value, incomingStories);
+
       room.value = message.room ?? null;
-      stories.value = message.stories ?? [];
+      stories.value = merged.stories;
       players.value = message.players ?? [];
-      votes.value = message.votes ?? {};
+      if (!merged.ignoredStaleFlowStory) {
+        votes.value = message.votes ?? {};
+      }
     }
 
     if (message.type === "presence") {

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { TransferCandidate } from "~/types/room";
+import type { Story, TransferCandidate } from "~/types/room";
 
 definePageMeta({
     middleware: ["auth"],
@@ -142,11 +142,14 @@ const {
     activeStory,
     isVoting,
     isVoted,
+    isStoryActionPending,
+    pendingStoryActionType,
     setActive,
     startVote,
     stopVote,
     completeStory,
     refreshStories,
+    updateStoryLocally,
     onStoryStatusChange,
 } = useRoomStories(roomId, hasJoinedRoom);
 
@@ -195,11 +198,10 @@ function onDeleteStory(story: any) {
     isStoryDeleteModalOpen.value = true;
 }
 
-function onStoryEditSuccess(payload: { id: string; title: string }) {
-    const latestStory = stories.value.find((story) => story.id === payload.id);
-    if (latestStory) {
-        selectedStory.value = latestStory;
-    }
+function onStoryEditSuccess(story: Story) {
+    updateStoryLocally(story.id, story);
+    selectedStory.value = story;
+    void refreshStories();
 }
 
 function onViewVotes(story: any) {
@@ -341,12 +343,37 @@ watch(stories, (nextStories) => {
                                 {{ activeStory.title }}
                             </h2>
                             <div v-if="canEdit" class="flex items-center gap-2">
-                                <template v-if="isVoting">
+                                <template v-if="pendingStoryActionType === 'startVote'">
+                                    <UButton
+                                        size="sm"
+                                        color="primary"
+                                        variant="solid"
+                                        icon="i-lucide-loader-circle"
+                                        loading
+                                        disabled
+                                    >
+                                        Starting Vote
+                                    </UButton>
+                                </template>
+                                <template v-else-if="pendingStoryActionType === 'stopVote'">
+                                    <UButton
+                                        size="sm"
+                                        color="error"
+                                        variant="solid"
+                                        icon="i-lucide-loader-circle"
+                                        loading
+                                        disabled
+                                    >
+                                        Stopping Vote
+                                    </UButton>
+                                </template>
+                                <template v-else-if="isVoting">
                                     <UButton
                                         size="sm"
                                         color="error"
                                         variant="solid"
                                         icon="i-lucide-square"
+                                        :disabled="isStoryActionPending"
                                         @click="stopVote"
                                     >
                                         Stop Vote
@@ -358,6 +385,7 @@ watch(stories, (nextStories) => {
                                         color="primary"
                                         variant="solid"
                                         icon="i-lucide-rotate-ccw"
+                                        :disabled="isStoryActionPending"
                                         @click="startVote"
                                     >
                                         Restart Vote
@@ -367,6 +395,7 @@ watch(stories, (nextStories) => {
                                         color="success"
                                         variant="subtle"
                                         icon="i-lucide-check-circle"
+                                        :disabled="isStoryActionPending"
                                         @click="isStoryCompleteModalOpen = true"
                                     >
                                         Complete Story
@@ -378,6 +407,7 @@ watch(stories, (nextStories) => {
                                         color="primary"
                                         variant="solid"
                                         icon="i-lucide-play-circle"
+                                        :disabled="isStoryActionPending"
                                         @click="startVote"
                                     >
                                         Start Vote

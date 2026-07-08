@@ -43,6 +43,8 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, message: "Unable to update profile." });
   }
 
+  await syncUserRoomSessions(event, user.id);
+
   return {
     userId: profile.userId,
     user_id: profile.userId,

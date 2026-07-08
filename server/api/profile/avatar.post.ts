@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { blob } from "hub:blob";
 import { db, schema } from "hub:db";
 
@@ -40,16 +39,29 @@ export default defineEventHandler(async (event) => {
     access: "public",
   });
 
+  const now = new Date();
+
   await db
-    .update(schema.profiles)
-    .set({
+    .insert(schema.profiles)
+    .values({
+      userId: user.id,
+      name: user.name || user.email,
       avatarPath: pathname,
-      updatedAt: new Date(),
+      createdAt: now,
+      updatedAt: now,
     })
-    .where(eq(schema.profiles.userId, user.id));
+    .onConflictDoUpdate({
+      target: schema.profiles.userId,
+      set: {
+        avatarPath: pathname,
+        updatedAt: now,
+      },
+    });
+
+  await syncUserRoomSessions(event, user.id);
 
   return {
     avatarPath: pathname,
-    avatar: `${avatarUrlFromPath(pathname)}?t=${Date.now()}`,
+    avatar: avatarUrlFromPath(pathname, now),
   };
 });

@@ -1,4 +1,6 @@
 <script lang="ts" setup>
+import type { Story } from "~/types/room"
+
 const props = defineProps<{
     modelValue: boolean
     story: {
@@ -10,7 +12,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'update:modelValue', value: boolean): void
-    (e: 'success', payload: { id: string; title: string }): void
+    (e: 'success', story: Story): void
 }>()
 
 const toast = useToast()
@@ -34,8 +36,9 @@ async function updateStory() {
 
     isUpdating.value = true
 
+    let updatedStory: Story
     try {
-        await $fetch(`/api/rooms/${props.story.room_id}/stories/${props.story.id}`, {
+        updatedStory = await $fetch<Story>(`/api/rooms/${props.story.room_id}/stories/${props.story.id}`, {
             method: 'PATCH',
             body: { title: titleInput.value },
         })
@@ -46,7 +49,7 @@ async function updateStory() {
     }
 
     isUpdating.value = false
-    emit('success', { id: props.story!.id, title: titleInput.value })
+    emit('success', updatedStory)
     isOpen.value = false
     toast.add({ title: 'Success', description: 'Story updated.', color: 'success' })
 }

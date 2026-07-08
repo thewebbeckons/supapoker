@@ -42,10 +42,13 @@ export function mapStory(row: typeof schema.stories.$inferSelect): Story {
   };
 }
 
-export function avatarUrlFromPath(path: string | null | undefined) {
+export function avatarUrlFromPath(path: string | null | undefined, version?: Date | string | number | null) {
   if (!path) return null;
-  if (path.startsWith("http://") || path.startsWith("https://")) return path;
-  return `/api/avatars/${path}`;
+  const url = path.startsWith("http://") || path.startsWith("https://") ? path : `/api/avatars/${path}`;
+  if (!version) return url;
+
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}t=${encodeURIComponent(toIso(version))}`;
 }
 
 export async function ensureProfileForUser(user: Pick<CurrentUser, "id" | "email" | "name" | "image">) {
@@ -163,7 +166,7 @@ export async function listRoomPlayers(roomId: string, adminUserId: string): Prom
     return {
       id: userId,
       name: profile?.name ?? "Unknown user",
-      avatar: avatarUrlFromPath(profile?.avatarPath) ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
+      avatar: avatarUrlFromPath(profile?.avatarPath, profile?.updatedAt) ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
       isModerator: userId === adminUserId,
       isOnline: false,
     };
