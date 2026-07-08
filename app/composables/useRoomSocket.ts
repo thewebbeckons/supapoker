@@ -17,6 +17,13 @@ type SharedRoomSocketState = RoomSocketState & {
   activeSubscribers: number;
 };
 
+interface RoomSnapshot {
+  room: Room | null;
+  stories: Story[];
+  players: Player[];
+  votes?: VotesMap;
+}
+
 const roomSockets = new Map<string, SharedRoomSocketState>();
 const STORY_FLOW_STATUSES = new Set(["active", "voting", "voted"]);
 
@@ -59,6 +66,10 @@ function createRoomSocket(roomId: string): SharedRoomSocketState {
   const isConnected = ref(false);
   let socket: WebSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let snapshotRefreshPromise: Promise<void> | null = null;
+  let hasQueuedSnapshotRefresh = false;
+  let nextSnapshotRequestId = 0;
+  let latestAppliedSnapshotRequestId = 0;
   let shouldReconnect = false;
 
   function websocketUrl() {
@@ -72,15 +83,58 @@ function createRoomSocket(roomId: string): SharedRoomSocketState {
     reconnectTimer = null;
   }
 
+  function applySnapshot(snapshot: RoomSnapshot) {
+    const incomingStories = snapshot.stories ?? [];
+    const merged = mergeStories(stories.value, incomingStories);
+
+    room.value = snapshot.room ?? null;
+    stories.value = merged.stories;
+    players.value = snapshot.players ?? [];
+    if (!merged.ignoredStaleFlowStory && Object.prototype.hasOwnProperty.call(snapshot, "votes")) {
+      votes.value = snapshot.votes ?? {};
+    }
+  }
+
+  async function refreshSnapshot() {
+    if (snapshotRefreshPromise) {
+      hasQueuedSnapshotRefresh = true;
+      return snapshotRefreshPromise;
+    }
+
+    const requestId = ++nextSnapshotRequestId;
+    snapshotRefreshPromise = (async () => {
+      try {
+        const snapshot = await $fetch<RoomSnapshot>(`/api/rooms/${roomId}/snapshot`);
+        if (requestId < latestAppliedSnapshotRequestId) return;
+
+        latestAppliedSnapshotRequestId = requestId;
+        applySnapshot(snapshot);
+      } catch {
+        // The websocket will reconnect and rehydrate from the room session if this fetch fails transiently.
+      } finally {
+        snapshotRefreshPromise = null;
+        if (hasQueuedSnapshotRefresh) {
+          hasQueuedSnapshotRefresh = false;
+          void refreshSnapshot();
+        }
+      }
+    })();
+
+    return snapshotRefreshPromise;
+  }
+
   function applyMessage(message: any) {
     if (message.type === "state") {
-      const incomingStories = message.stories ?? [];
-      const merged = mergeStories(stories.value, incomingStories);
+      applySnapshot(message);
+    }
 
-      room.value = message.room ?? null;
-      stories.value = merged.stories;
-      players.value = message.players ?? [];
-      if (!merged.ignoredStaleFlowStory) {
+    if (message.type === "state_changed") {
+      void refreshSnapshot();
+    }
+
+    if (message.type === "votes") {
+      const activeStory = stories.value.find(isFlowStory);
+      if (!activeStory || activeStory.id === message.storyId) {
         votes.value = message.votes ?? {};
       }
     }

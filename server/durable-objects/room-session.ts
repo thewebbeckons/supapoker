@@ -127,7 +127,7 @@ export class RoomSession extends DurableObject<Env> {
     );
 
     if (broadcast) {
-      this.broadcast(await this.buildStateMessage());
+      this.broadcastStateChanged();
     }
   }
 
@@ -168,9 +168,12 @@ export class RoomSession extends DurableObject<Env> {
     await this.syncState(state);
   }
 
-  async resetVotes(storyId: string) {
+  async resetVotes(storyId: string, broadcast = true) {
     this.ctx.storage.sql.exec("DELETE FROM votes WHERE story_id = ?", storyId);
     this.ctx.storage.sql.exec("DELETE FROM revealed_votes WHERE story_id = ?", storyId);
+    if (broadcast) {
+      this.broadcastVotes(storyId);
+    }
   }
 
   async getVoteResult(storyId: string) {
@@ -195,6 +198,8 @@ export class RoomSession extends DurableObject<Env> {
       );
     }
 
+    this.broadcastVotes(storyId, true);
+
     return {
       votes,
       ...summarizeVotes(votes),
@@ -215,7 +220,7 @@ export class RoomSession extends DurableObject<Env> {
       voteValue,
     );
 
-    this.broadcast(await this.buildStateMessage());
+    this.broadcastVotes(storyId);
     return { ok: true };
   }
 
@@ -246,7 +251,7 @@ export class RoomSession extends DurableObject<Env> {
     }
 
     if (parsed.type === "refresh_state") {
-      this.broadcast(await this.buildStateMessage());
+      socket.send(JSON.stringify({ type: "state_changed" }));
       return;
     }
 
@@ -301,14 +306,33 @@ export class RoomSession extends DurableObject<Env> {
     return Object.fromEntries(rows.map(row => [row.user_id, row.vote_value]));
   }
 
+  private buildVotesMessage(storyId: string, revealVotes = false) {
+    const currentVotes = this.readVotes(storyId);
+    const revealedVotes = revealVotes ? this.readRevealedVotes(storyId) : {};
+    const votes = revealVotes && Object.keys(revealedVotes).length > 0
+      ? revealedVotes
+      : Object.fromEntries(Object.entries(currentVotes).map(([userId, voteValue]) => [
+        userId,
+        revealVotes ? voteValue : "__voted__",
+      ]));
+
+    return {
+      type: "votes",
+      storyId,
+      votes,
+    };
+  }
+
   private async buildStateMessage(revealVotes = false) {
     const state = await this.readState();
     const activeStory = state.stories.find(story => ["active", "voting", "voted"].includes(story.status));
     const shouldRevealVotes = revealVotes || activeStory?.status === "voted" || activeStory?.status === "completed";
+    const currentVotes = activeStory ? this.readVotes(activeStory.id) : {};
+    const revealedVotes = activeStory ? this.readRevealedVotes(activeStory.id) : {};
     const votes = activeStory && activeStory.status !== "active"
       ? shouldRevealVotes
-        ? this.readVotes(activeStory.id)
-        : Object.fromEntries(Object.keys(this.readVotes(activeStory.id)).map(userId => [userId, "__voted__"]))
+        ? Object.keys(revealedVotes).length > 0 ? revealedVotes : currentVotes
+        : Object.fromEntries(Object.keys(currentVotes).map(userId => [userId, "__voted__"]))
       : {};
 
     return {
@@ -318,6 +342,17 @@ export class RoomSession extends DurableObject<Env> {
       players: this.withOnlineState(state.players),
       votes,
     };
+  }
+
+  private broadcastStateChanged() {
+    this.broadcast({
+      type: "state_changed",
+      id: crypto.randomUUID(),
+    });
+  }
+
+  private broadcastVotes(storyId: string, revealVotes = false) {
+    this.broadcast(this.buildVotesMessage(storyId, revealVotes));
   }
 
   private withOnlineState(players: Player[]) {

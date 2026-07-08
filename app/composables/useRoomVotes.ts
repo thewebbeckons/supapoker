@@ -12,7 +12,6 @@ export function useRoomVotes(
   const { user } = useCurrentUser();
   const votes = socket.votes;
   const selectedCard = ref<string | null>(null);
-  let revealedVotesTimer: ReturnType<typeof setInterval> | null = null;
 
   async function persistVote(storyId: string, userId: string, cardValue: string, sentOverSocket: boolean) {
     try {
@@ -46,22 +45,6 @@ export function useRoomVotes(
     selectedCard.value = null;
   }
 
-  function stopRevealedVotesRefresh() {
-    if (!revealedVotesTimer) return;
-    clearInterval(revealedVotesTimer);
-    revealedVotesTimer = null;
-  }
-
-  async function fetchRevealedVotes(storyId: string) {
-    if (!isEnabled.value || activeStory.value?.id !== storyId || activeStory.value?.status !== "voted") return;
-
-    try {
-      votes.value = await $fetch<Record<string, string>>(`/api/rooms/${roomId}/stories/${storyId}/votes`);
-    } catch {
-      // Realtime messages are still primary; ignore transient fallback refresh failures.
-    }
-  }
-
   onStoryStatusChange.value = (oldStatus: string, newStatus: string) => {
     if (!isEnabled.value) return;
     if (newStatus === "voting" && oldStatus !== "voting") clearVotes();
@@ -75,26 +58,6 @@ export function useRoomVotes(
     },
     { immediate: true },
   );
-
-  watch(
-    [() => activeStory.value?.id, () => activeStory.value?.status, isEnabled],
-    ([storyId, status, enabled]) => {
-      stopRevealedVotesRefresh();
-      if (!enabled || !storyId || status !== "voted") return;
-
-      void fetchRevealedVotes(storyId);
-      if (typeof window !== "undefined") {
-        revealedVotesTimer = setInterval(() => {
-          void fetchRevealedVotes(storyId);
-        }, 1000);
-      }
-    },
-    { immediate: true },
-  );
-
-  onUnmounted(() => {
-    stopRevealedVotesRefresh();
-  });
 
   return {
     votes,

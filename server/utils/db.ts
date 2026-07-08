@@ -2,7 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import type { DurableObjectStub } from "@cloudflare/workers-types";
 import { db, schema } from "hub:db";
 import type { CurrentUser } from "~/composables/useCurrentUser";
-import type { Player, Room, Story, StoryVoteSnapshot } from "~/types/room";
+import type { Player, Room, Story, StoryVoteSnapshot, VotesMap } from "~/types/room";
 import { requireRoomSessionNamespace } from "./cloudflare";
 
 function toIso(value: Date | string | number | null | undefined) {
@@ -185,6 +185,28 @@ export async function getRoomRealtimeSnapshot(roomId: string) {
     stories,
     players,
   };
+}
+
+export async function getRoomClientSnapshot(roomId: string) {
+  const snapshot = await getRoomRealtimeSnapshot(roomId);
+  const activeStory = snapshot.stories.find(story => ["active", "voting", "voted"].includes(story.status));
+
+  if (activeStory?.status === "voted") {
+    const rows = await listStoryVoteSnapshots(activeStory.id);
+    return {
+      ...snapshot,
+      votes: Object.fromEntries(rows.map(row => [row.userId, row.voteValue])) as VotesMap,
+    };
+  }
+
+  if (!activeStory || activeStory.status === "active") {
+    return {
+      ...snapshot,
+      votes: {} as VotesMap,
+    };
+  }
+
+  return snapshot;
 }
 
 export async function listStoryVoteSnapshots(storyId: string): Promise<StoryVoteSnapshot[]> {
