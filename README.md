@@ -23,7 +23,7 @@ Create `.env` from `.env.example`:
 BETTER_AUTH_SECRET=your-secret-at-least-32-characters
 GITHUB_CLIENT_ID=your-github-oauth-client-id
 GITHUB_CLIENT_SECRET=your-github-oauth-client-secret
-NUXT_PUBLIC_SITE_URL=http://localhost:3000
+NUXT_PUBLIC_SITE_URL=http://localhost:8787
 EMAIL_FROM=SupaPoker <noreply@your-domain.com>
 ```
 
@@ -33,7 +33,15 @@ EMAIL_FROM=SupaPoker <noreply@your-domain.com>
 pnpm run dev
 ```
 
-NuxtHub applies D1 migrations during dev/build. Generate migrations after schema changes:
+This builds the app, applies pending migrations to the persistent local D1 database, and starts Wrangler on `http://localhost:8787`. Running the built Worker is required for local Durable Object RPC and WebSocket support.
+
+For UI-only work with Nuxt hot module replacement, use:
+
+```bash
+pnpm run dev:nuxt
+```
+
+The Nuxt-only server uses NuxtHub's local SQLite driver, but it does not run the room Durable Object. Generate migrations after schema changes:
 
 ```bash
 pnpm run db:generate

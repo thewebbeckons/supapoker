@@ -1,5 +1,4 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
-import type { DurableObjectStub } from "@cloudflare/workers-types";
 import { db, schema } from "hub:db";
 import type { CurrentUser } from "~/composables/useCurrentUser";
 import type { Player, Room, Story, StoryVoteSnapshot, VotesMap } from "~/types/room";
@@ -228,5 +227,5 @@ export async function listStoryVoteSnapshots(storyId: string): Promise<StoryVote
 }
 
 export function getRoomSessionStub(event: Parameters<typeof requireRoomSessionNamespace>[0], roomId: string) {
-  return requireRoomSessionNamespace(event).getByName(roomId) as DurableObjectStub<import("../durable-objects/room-session").RoomSession>;
+  return requireRoomSessionNamespace(event).getByName(roomId);
 }

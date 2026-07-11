@@ -1,9 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "hub:db";
 import { z } from "zod";
+import { PLANNING_POKER_VOTES } from "~/utils/room-realtime";
 
 const voteSchema = z.object({
-  value: z.string().min(1).max(20),
+  value: z.enum(PLANNING_POKER_VOTES),
 });
 
 export default defineEventHandler(async (event) => {

@@ -1,6 +1,6 @@
 import type { Story, StoryStatus } from "~/types/room";
+import type { RoomRealtimeSession } from "./useRoomRealtime";
 
-export type StoryStatusChangeCallback = (oldStatus: string, newStatus: string) => void;
 type StoryActionType = "setActive" | "startVote" | "stopVote" | "completeStory";
 
 interface PendingStoryAction {
@@ -10,38 +10,35 @@ interface PendingStoryAction {
   optimisticStatus: StoryStatus;
 }
 
-export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(true)) {
+export function useRoomStories(
+  roomId: MaybeRefOrGetter<string>,
+  realtime: RoomRealtimeSession,
+  isEnabled: Ref<boolean> = ref(true),
+) {
   const toast = useToast();
-  const socket = useRoomSocket(roomId, isEnabled);
-  const sourceStories = socket.stories;
-  const onStoryStatusChange = ref<StoryStatusChangeCallback | null>(null);
+  const sourceStories = realtime.stories;
   const pendingStoryAction = ref<PendingStoryAction | null>(null);
   let nextActionId = 0;
 
-  const stories = computed({
-    get: () => {
-      const pending = pendingStoryAction.value;
-      if (!pending) return sourceStories.value;
+  const stories = computed(() => {
+    const pending = pendingStoryAction.value;
+    if (!pending) return sourceStories.value;
 
-      let hasPendingStory = false;
-      const nextStories = sourceStories.value.map((story) => {
-        if (story.id === pending.storyId) {
-          hasPendingStory = true;
-          return { ...story, status: pending.optimisticStatus };
-        }
+    let hasPendingStory = false;
+    const nextStories = sourceStories.value.map((story) => {
+      if (story.id === pending.storyId) {
+        hasPendingStory = true;
+        return { ...story, status: pending.optimisticStatus };
+      }
 
-        if (pending.optimisticStatus === "active" && ["active", "voting", "voted"].includes(story.status)) {
-          return { ...story, status: "pending" as const };
-        }
+      if (pending.optimisticStatus === "active" && ["active", "voting", "voted"].includes(story.status)) {
+        return { ...story, status: "pending" as const };
+      }
 
-        return story;
-      });
+      return story;
+    });
 
-      return hasPendingStory ? nextStories : sourceStories.value;
-    },
-    set: (nextStories: Story[]) => {
-      sourceStories.value = nextStories;
-    },
+    return hasPendingStory ? nextStories : sourceStories.value;
   });
 
   const activeStory = computed(() =>
@@ -51,45 +48,10 @@ export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(tru
   const isVoted = computed(() => activeStory.value?.status === "voted");
   const isStoryActionPending = computed(() => pendingStoryAction.value !== null);
   const pendingStoryActionType = computed(() => pendingStoryAction.value?.type ?? null);
-  let lastActiveStoryId: string | null = null;
-  let nextFetchRequestId = 0;
-  let latestAppliedFetchRequestId = 0;
 
-  watch(
-    () => activeStory.value ? { id: activeStory.value.id, status: activeStory.value.status } : null,
-    (nextStory, previousStory) => {
-      if (nextStory) {
-        lastActiveStoryId = nextStory.id;
-      }
-
-      const previousStatus = previousStory?.status;
-      const completedStoryId = lastActiveStoryId ?? previousStory?.id;
-      const nextStatus = nextStory?.status
-        ?? stories.value.find(story => story.id === completedStoryId && story.status === "completed")?.status;
-
-      if (!nextStatus || !previousStatus || nextStatus === previousStatus) return;
-      onStoryStatusChange.value?.(previousStatus, nextStatus);
-    },
-  );
-
-  async function fetchStories() {
-    const requestId = ++nextFetchRequestId;
-
-    if (!isEnabled.value) {
-      sourceStories.value = [];
-      latestAppliedFetchRequestId = requestId;
-      return;
-    }
-
-    try {
-      const nextStories = await $fetch<Story[]>(`/api/rooms/${roomId}/stories`);
-      if (!isEnabled.value || requestId < latestAppliedFetchRequestId) return;
-
-      latestAppliedFetchRequestId = requestId;
-      sourceStories.value = nextStories;
-    } catch {
-      // The websocket remains the primary realtime path; ignore transient fallback refresh failures.
-    }
+  async function refreshStories() {
+    if (!isEnabled.value) return;
+    await realtime.refresh();
   }
 
   async function runAction(
@@ -108,21 +70,22 @@ export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(tru
     };
 
     try {
-      await $fetch(`/api/rooms/${roomId}/actions`, {
+      await $fetch(`/api/rooms/${toValue(roomId)}/actions`, {
         method: "POST",
         body: { type, storyId },
       });
-      await fetchStories();
+      await refreshStories();
     } catch (error: any) {
-      if (pendingStoryAction.value?.id === actionId) {
-        pendingStoryAction.value = null;
-      }
-      await fetchStories();
       toast.add({
         title: "Error",
         description: error?.data?.message ?? error?.message ?? "Action failed.",
         color: "error",
       });
+      await refreshStories();
+    } finally {
+      if (pendingStoryAction.value?.id === actionId) {
+        pendingStoryAction.value = null;
+      }
     }
   }
 
@@ -147,13 +110,13 @@ export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(tru
   }
 
   function updateStoryLocally(id: string, updates: Partial<Story>) {
-    stories.value = stories.value.map(story =>
+    realtime.updateStories(current => current.map(story =>
       story.id === id ? { ...story, ...updates } : story,
-    );
+    ));
   }
 
   function removeStoryLocally(id: string) {
-    stories.value = stories.value.filter(story => story.id !== id);
+    realtime.updateStories(current => current.filter(story => story.id !== id));
   }
 
   watch(sourceStories, (nextStories) => {
@@ -166,15 +129,6 @@ export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(tru
     }
   });
 
-  watch(isEnabled, (enabled) => {
-    if (!enabled) {
-      sourceStories.value = [];
-      return;
-    }
-
-    void fetchStories();
-  }, { immediate: true });
-
   return {
     stories,
     activeStory,
@@ -186,9 +140,8 @@ export function useRoomStories(roomId: string, isEnabled: Ref<boolean> = ref(tru
     startVote,
     stopVote,
     completeStory,
-    refreshStories: fetchStories,
+    refreshStories,
     updateStoryLocally,
     removeStoryLocally,
-    onStoryStatusChange,
   };
 }

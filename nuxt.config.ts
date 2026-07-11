@@ -27,16 +27,15 @@ export default defineNuxtConfig({
   hub: {
     db: {
       dialect: "sqlite",
-      driver: "d1",
       connection: {
-        databaseId: "c1fc4e89-5177-47e8-b82b-2d1439d80425"
-      }
+        databaseId: "c1fc4e89-5177-47e8-b82b-2d1439d80425",
+      },
     },
     kv: false,
     blob: {
       driver: "cloudflare-r2",
       binding: "BLOB",
-      bucketName: "supapoker-avatars"
+      bucketName: "supapoker-avatars",
     },
     cache: false,
   },
@@ -52,9 +51,6 @@ export default defineNuxtConfig({
   nitro: {
     preset: "cloudflare_module",
     entry: "./cloudflare-entry.ts",
-    experimental: {
-      websocket: true,
-    },
   },
   routeRules: {
     // Disable SSR for rooms to avoid hydration mismatches with real-time features

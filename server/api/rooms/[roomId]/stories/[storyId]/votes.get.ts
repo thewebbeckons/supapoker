@@ -15,6 +15,9 @@ export default defineEventHandler(async (event) => {
   if (!story) {
     throw createError({ statusCode: 404, message: "Story not found." });
   }
+  if (!['voted', 'completed'].includes(story.status)) {
+    throw createError({ statusCode: 409, message: "Votes have not been revealed for this story." });
+  }
 
   const rows = await listStoryVoteSnapshots(storyId);
   return Object.fromEntries(rows.map(row => [row.userId, row.voteValue]));

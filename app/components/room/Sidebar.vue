@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { useClipboard } from '@vueuse/core'
-import type { Player } from '~/types/room'
+import type { Player, RoomConnectionStatus } from '~/types/room'
 
 const { copy } = useClipboard()
 const toast = useToast()
@@ -14,7 +14,8 @@ const props = defineProps<{
     room: {
         name?: string | null,
         description?: string | null
-    } | null
+    } | null,
+    connectionStatus: RoomConnectionStatus
 }>()
 
 function playerHasVoted(id: string): boolean {
@@ -27,12 +28,23 @@ function playerVote(id: string): string | undefined {
 
 const bannerText = computed(() => {
     if (props.activeStory?.status === 'voting') {
-        const allVoted = props.players.length > 0 && props.players.every(player => playerHasVoted(player.id))
+        const onlinePlayers = props.players.filter(player => player.isOnline)
+        const allVoted = onlinePlayers.length > 0 && onlinePlayers.every(player => playerHasVoted(player.id))
         return allVoted
             ? 'Waiting for moderator to finalise vote'
             : 'Waiting for players to vote...'
     }
     return null
+})
+
+const connectionBadge = computed(() => {
+    if (props.connectionStatus === 'connected') {
+        return { label: 'Live', color: 'success' as const, icon: 'i-lucide-radio' }
+    }
+    if (props.connectionStatus === 'connecting' || props.connectionStatus === 'reconnecting') {
+        return { label: 'Reconnecting', color: 'warning' as const, icon: 'i-lucide-loader-circle' }
+    }
+    return { label: 'Offline', color: 'neutral' as const, icon: 'i-lucide-wifi-off' }
 })
 
 function copyRoomUrl() {
@@ -62,7 +74,16 @@ function copyRoomUrl() {
         <!-- Timer & Header -->
         <div class="p-4 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center">
             <h2 class="font-medium text-neutral-900 dark:text-white">Players:</h2>
-            <RoomTimer :story="activeStory" />
+            <div class="flex items-center gap-2">
+                <UBadge
+                    :label="connectionBadge.label"
+                    :color="connectionBadge.color"
+                    :icon="connectionBadge.icon"
+                    variant="subtle"
+                    size="sm"
+                />
+                <RoomTimer :story="activeStory" />
+            </div>
         </div>
 
         <!-- Player List -->

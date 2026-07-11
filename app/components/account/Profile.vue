@@ -20,18 +20,7 @@ const profileState = reactive<ProfileSchema>({
 });
 const avatarUrl = ref<string | null>(null);
 
-const { data: profile, refresh } = useAsyncData("profile", async () => {
-  if (!user.value) return null;
-  return $fetch<{
-    name: string;
-    email: string;
-    avatar: string | null;
-    avatarPath: string | null;
-  }>("/api/profile");
-}, {
-  watch: [user],
-  default: () => null,
-});
+const { data: profile } = useProfile();
 
 watch(profile, (newProfile) => {
   if (newProfile) {
@@ -59,23 +48,25 @@ async function onProfileSubmit(payload: FormSubmitEvent<ProfileSchema>) {
   try {
     if (!user.value) return;
 
-    await $fetch("/api/profile", {
+    const updatedProfile = await $fetch<UserProfile>("/api/profile", {
       method: "PATCH",
       body: {
         name: payload.data.name,
       },
     });
 
-    await refresh();
+    profile.value = updatedProfile;
     toast.add({ title: "Success", description: "Profile updated!", color: "success" });
   } catch (error: any) {
     toast.add({ title: "Error", description: error?.data?.message ?? error.message, color: "error" });
   }
 }
 
-async function onAvatarUpdate(url: string | null) {
+function onAvatarUpdate(url: string | null) {
   avatarUrl.value = url;
-  await refresh();
+  if (profile.value) {
+    profile.value = { ...profile.value, avatar: url };
+  }
 }
 </script>
 

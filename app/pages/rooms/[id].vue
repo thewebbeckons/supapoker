@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { Story, TransferCandidate } from "~/types/room";
+import type { Room, Story, TransferCandidate } from "~/types/room";
 
 definePageMeta({
     middleware: ["auth"],
@@ -7,7 +7,7 @@ definePageMeta({
 
 const route = useRoute();
 
-const roomId = route.params.id as string;
+const roomId = computed(() => String(route.params.id));
 const { user } = useCurrentUser();
 const toast = useToast();
 
@@ -18,7 +18,7 @@ const isStoryEditModalOpen = ref(false);
 const isStoryDeleteModalOpen = ref(false);
 const isStoryCompleteModalOpen = ref(false);
 const isStoryVotesModalOpen = ref(false);
-const selectedStory = ref<any>(null);
+const selectedStory = ref<Story | null>(null);
 const isJoinModalOpen = ref(false);
 const isJoiningRoom = ref(false);
 const pokeBurstKey = ref(0);
@@ -44,13 +44,13 @@ const {
     error: roomError,
     refresh,
 } = await useAsyncData(
-    `room-access-${roomId}`,
+    `room-access-${roomId.value}`,
     async () => {
         if (!user.value) return null;
-        return $fetch<{ room: any; isParticipant: boolean }>(`/api/rooms/${roomId}`);
+        return $fetch<{ room: Room; isParticipant: boolean }>(`/api/rooms/${roomId.value}`);
     },
     {
-        watch: [user],
+        watch: [user, roomId],
     },
 );
 
@@ -83,7 +83,7 @@ async function joinRoom() {
     isJoiningRoom.value = true;
 
     try {
-        await $fetch(`/api/rooms/${roomId}/join`, { method: "POST" });
+        await $fetch(`/api/rooms/${roomId.value}/join`, { method: "POST" });
         await refresh();
         isJoinModalOpen.value = false;
     } catch (error: any) {
@@ -123,8 +123,18 @@ const showRoomError = computed(() => {
     return hasRoomLoadFailed.value;
 });
 
-const roomSocket = useRoomSocket(roomId, hasJoinedRoom);
-const room = computed(() => roomSocket.room.value ?? initialRoom.value);
+const realtime = useRoomRealtime(roomId, hasJoinedRoom);
+const connectionStatus = realtime.status;
+const room = computed(() => {
+    const realtimeRoom = realtime.room.value;
+    const accessRoom = initialRoom.value;
+    if (!realtimeRoom) return accessRoom;
+    if (!accessRoom) return realtimeRoom;
+
+    const realtimeUpdatedAt = Date.parse(realtimeRoom.updatedAt || realtimeRoom.updated_at);
+    const accessUpdatedAt = Date.parse(accessRoom.updatedAt || accessRoom.updated_at);
+    return accessUpdatedAt > realtimeUpdatedAt ? accessRoom : realtimeRoom;
+});
 
 const canEdit = computed(() => {
     return !!(
@@ -150,22 +160,18 @@ const {
     completeStory,
     refreshStories,
     updateStoryLocally,
-    onStoryStatusChange,
-} = useRoomStories(roomId, hasJoinedRoom);
+    removeStoryLocally,
+} = useRoomStories(roomId, realtime, hasJoinedRoom);
 
 const { votes, selectedCard, selectCard } = useRoomVotes(
     roomId,
+    realtime,
     activeStory,
     isVoting,
-    onStoryStatusChange,
     hasJoinedRoom,
 );
 
-const { players, pokeUsers, lastPokeId } = useRoomPresence(
-    roomId,
-    currentRoomCreatorId,
-    hasJoinedRoom,
-);
+const { players, pokeUsers, lastPokeId } = useRoomPresence(roomId, realtime);
 
 watch(lastPokeId, (value) => {
     if (!value) return;
@@ -188,12 +194,12 @@ function openEditModal(): void {
     isEditModalOpen.value = true;
 }
 
-function onEditStory(story: any) {
+function onEditStory(story: Story) {
     selectedStory.value = story;
     isStoryEditModalOpen.value = true;
 }
 
-function onDeleteStory(story: any) {
+function onDeleteStory(story: Story) {
     selectedStory.value = story;
     isStoryDeleteModalOpen.value = true;
 }
@@ -204,15 +210,27 @@ function onStoryEditSuccess(story: Story) {
     void refreshStories();
 }
 
-function onViewVotes(story: any) {
+function onViewVotes(story: Story) {
     selectedStory.value = story;
     isStoryVotesModalOpen.value = true;
 }
 
-watch(stories, (nextStories) => {
-    if (!selectedStory.value) return;
+function onStoryDeleteSuccess() {
+    if (selectedStory.value) removeStoryLocally(selectedStory.value.id);
+    selectedStory.value = null;
+    isStoryDeleteModalOpen.value = false;
+    void refreshStories();
+}
 
-    const latestStory = nextStories.find((story) => story.id === selectedStory.value.id);
+async function onRoomEditSuccess() {
+    await Promise.all([refresh(), realtime.refresh()]);
+}
+
+watch(stories, (nextStories) => {
+    const selected = selectedStory.value;
+    if (!selected) return;
+
+    const latestStory = nextStories.find((story) => story.id === selected.id);
     if (latestStory) {
         selectedStory.value = latestStory;
         return;
@@ -272,7 +290,7 @@ watch(stories, (nextStories) => {
                             {{ joinModalTitle }}
                         </p>
                         <p class="text-sm text-neutral-500 mt-2">
-                            Room ID: {{ roomId }}
+                        Room ID: {{ roomId }}
                         </p>
                     </div>
 
@@ -454,6 +472,7 @@ watch(stories, (nextStories) => {
                 :is-voted="isVoted"
                 :votes="votes"
                 :room="room ?? null"
+                :connection-status="connectionStatus"
             />
         </div>
 
@@ -462,7 +481,7 @@ watch(stories, (nextStories) => {
             v-model="isEditModalOpen"
             :room="room ?? null"
             :transfer-candidates="transferCandidates"
-            @success="refresh"
+            @success="onRoomEditSuccess"
         />
 
         <!-- New Story Modal -->
@@ -484,6 +503,7 @@ watch(stories, (nextStories) => {
         <RoomStoryDeleteModal
             v-model="isStoryDeleteModalOpen"
             :story="selectedStory"
+            @success="onStoryDeleteSuccess"
         />
 
         <!-- Story Complete Confirmation Modal -->

@@ -1,8 +1,9 @@
 import type { H3Event } from "h3";
 import type { DurableObjectNamespace } from "@cloudflare/workers-types";
+import type { RoomSession } from "../durable-objects/room-session";
 
 export interface AppEnv {
-  ROOM_SESSION?: DurableObjectNamespace;
+  ROOM_SESSION?: DurableObjectNamespace<RoomSession>;
   EMAIL?: {
     send(message: {
       to: string | string[];

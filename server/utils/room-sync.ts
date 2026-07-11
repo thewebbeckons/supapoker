@@ -3,8 +3,10 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "hub:db";
 
 export async function syncRoomSession(event: H3Event, roomId: string) {
+  const stub = getRoomSessionStub(event, roomId);
+  const sequence = await stub.beginStateSync();
   const snapshot = await getRoomRealtimeSnapshot(roomId);
-  await getRoomSessionStub(event, roomId).syncState(snapshot);
+  await stub.commitStateSync(sequence, snapshot);
   return snapshot;
 }
 

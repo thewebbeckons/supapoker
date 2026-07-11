@@ -37,18 +37,30 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: "Completed stories cannot be made active." });
     }
 
-    await db
-      .update(schema.stories)
-      .set({ status: "pending", updatedAt: now })
-      .where(and(
-        eq(schema.stories.roomId, roomId),
-        inArray(schema.stories.status, ["active", "voting", "voted"]),
-      ));
-    await db
-      .update(schema.stories)
-      .set({ status: "active", updatedAt: now })
-      .where(and(eq(schema.stories.id, body.storyId), eq(schema.stories.roomId, roomId)));
-    await stub.resetVotes(body.storyId);
+    const currentVotingStory = await db.query.stories.findFirst({
+      where: and(eq(schema.stories.roomId, roomId), eq(schema.stories.status, "voting")),
+    });
+    if (currentVotingStory && currentVotingStory.id !== body.storyId) {
+      await stub.closeVoting(currentVotingStory.id);
+    }
+    await stub.discardVotes(body.storyId);
+
+    await db.batch([
+      db
+        .update(schema.stories)
+        .set({ status: "pending", updatedAt: now })
+        .where(and(
+          eq(schema.stories.roomId, roomId),
+          inArray(schema.stories.status, ["active", "voting", "voted"]),
+        )),
+      db
+        .update(schema.stories)
+        .set({ status: "active", updatedAt: now })
+        .where(and(eq(schema.stories.id, body.storyId), eq(schema.stories.roomId, roomId))),
+      db
+        .delete(schema.storyVoteSnapshots)
+        .where(eq(schema.storyVoteSnapshots.storyId, body.storyId)),
+    ]);
     await syncRoomSession(event, roomId);
     return { ok: true };
   }
@@ -58,11 +70,16 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, message: "Only active or voted stories can start voting." });
     }
 
-    await db
-      .update(schema.stories)
-      .set({ status: "voting", updatedAt: now })
-      .where(and(eq(schema.stories.id, body.storyId), eq(schema.stories.roomId, roomId)));
     await stub.resetVotes(body.storyId);
+    await db.batch([
+      db
+        .update(schema.stories)
+        .set({ status: "voting", updatedAt: now })
+        .where(and(eq(schema.stories.id, body.storyId), eq(schema.stories.roomId, roomId))),
+      db
+        .delete(schema.storyVoteSnapshots)
+        .where(eq(schema.storyVoteSnapshots.storyId, body.storyId)),
+    ]);
     await syncRoomSession(event, roomId);
     return { ok: true };
   }
@@ -73,7 +90,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const result = await stub.revealVotes(body.storyId);
-    await db
+    const updateStory = db
       .update(schema.stories)
       .set({
         status: "voted",
@@ -82,8 +99,7 @@ export default defineEventHandler(async (event) => {
         updatedAt: now,
       })
       .where(and(eq(schema.stories.id, body.storyId), eq(schema.stories.roomId, roomId)));
-
-    await db
+    const clearSnapshots = db
       .delete(schema.storyVoteSnapshots)
       .where(eq(schema.storyVoteSnapshots.storyId, body.storyId));
 
@@ -94,7 +110,13 @@ export default defineEventHandler(async (event) => {
       createdAt: now,
     }));
     if (snapshotRows.length > 0) {
-      await db.insert(schema.storyVoteSnapshots).values(snapshotRows);
+      await db.batch([
+        updateStory,
+        clearSnapshots,
+        db.insert(schema.storyVoteSnapshots).values(snapshotRows),
+      ]);
+    } else {
+      await db.batch([updateStory, clearSnapshots]);
     }
 
     await syncRoomSession(event, roomId);
@@ -106,7 +128,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const result = await stub.getVoteResult(body.storyId);
-  await db
+  const updateStory = db
     .update(schema.stories)
     .set({
       status: "completed",
@@ -116,8 +138,7 @@ export default defineEventHandler(async (event) => {
       updatedAt: now,
     })
     .where(and(eq(schema.stories.id, body.storyId), eq(schema.stories.roomId, roomId)));
-
-  await db
+  const clearSnapshots = db
     .delete(schema.storyVoteSnapshots)
     .where(eq(schema.storyVoteSnapshots.storyId, body.storyId));
 
@@ -128,7 +149,13 @@ export default defineEventHandler(async (event) => {
     createdAt: now,
   }));
   if (snapshotRows.length > 0) {
-    await db.insert(schema.storyVoteSnapshots).values(snapshotRows);
+    await db.batch([
+      updateStory,
+      clearSnapshots,
+      db.insert(schema.storyVoteSnapshots).values(snapshotRows),
+    ]);
+  } else {
+    await db.batch([updateStory, clearSnapshots]);
   }
 
   await syncRoomSession(event, roomId);

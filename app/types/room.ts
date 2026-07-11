@@ -61,3 +61,40 @@ export interface TransferCandidate {
     avatar: string
     isOnline: boolean
 }
+
+export interface ConnectedRoomUser {
+    id: string
+    name: string
+    avatar: string
+}
+
+export interface RoomRealtimeState {
+    room: Room | null
+    stories: Story[]
+    players: Player[]
+}
+
+export interface RoomRealtimeSnapshot extends RoomRealtimeState {
+    votes: VotesMap
+}
+
+export interface RoomSocketBootstrap {
+    syncSequence: number
+    user: ConnectedRoomUser
+    state: RoomRealtimeState
+}
+
+export type RoomRealtimeServerMessage =
+    | ({ type: 'snapshot', revision: number } & RoomRealtimeSnapshot)
+    | { type: 'presence', players: Player[] }
+    | { type: 'votes', storyId: string, votes: VotesMap }
+    | { type: 'poke', id: string, fromUserId: string }
+    | { type: 'room_deleted' }
+    | { type: 'error', code: string, message: string }
+
+export type RoomConnectionStatus =
+    | 'idle'
+    | 'connecting'
+    | 'connected'
+    | 'reconnecting'
+    | 'disconnected'

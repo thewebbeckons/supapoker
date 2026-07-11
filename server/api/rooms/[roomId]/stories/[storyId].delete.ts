@@ -8,6 +8,7 @@ export default defineEventHandler(async (event) => {
   if (!roomId || !storyId) throw createError({ statusCode: 400, message: "Room ID and story ID are required." });
 
   await requireRoomAdmin(roomId, user.id);
+  await getRoomSessionStub(event, roomId).discardVotes(storyId);
   await db
     .delete(schema.stories)
     .where(and(eq(schema.stories.id, storyId), eq(schema.stories.roomId, roomId)));

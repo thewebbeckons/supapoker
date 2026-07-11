@@ -7,12 +7,27 @@ export default defineEventHandler(async (event) => {
   if (!roomId) throw createError({ statusCode: 400, message: "Room ID is required." });
 
   await requireRoomAdmin(roomId, user.id);
-  await db.delete(schema.rooms).where(eq(schema.rooms.id, roomId));
+  const stub = getRoomSessionStub(event, roomId);
+  await stub.beginDelete();
 
   try {
-    await getRoomSessionStub(event, roomId).deleteRoom();
+    await db.delete(schema.rooms).where(eq(schema.rooms.id, roomId));
   } catch (error) {
-    console.error("[rooms] Failed to clean up realtime room after delete", { roomId, error });
+    try {
+      await stub.cancelDelete();
+    } catch (rollbackError) {
+      console.error("[rooms] Failed to roll back realtime room deletion", {
+        roomId,
+        error: rollbackError,
+      });
+    }
+    throw error;
+  }
+
+  try {
+    await stub.finalizeDelete();
+  } catch (error) {
+    console.error("[rooms] Failed to finalize realtime room deletion", { roomId, error });
   }
 
   return { ok: true };
