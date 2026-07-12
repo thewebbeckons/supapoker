@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+	const { landing = false } = defineProps<{ landing?: boolean }>();
 	const { user, loggedIn, signOut } = useCurrentUser();
 	const isMounted = ref(false);
 
@@ -53,13 +54,20 @@
 </script>
 
 <template>
-	<UHeader>
+	<UHeader :class="{ 'landing-app-header': landing }">
 		<template #title>
 			<NuxtLink
 				to="/"
 				class="flex items-center gap-2 font-bold text-xl"
+				:style="landing ? { color: '#f4f4f5' } : undefined"
 			>
-				<ClientOnly>
+				<img
+					v-if="landing"
+					src="/logo-pixel-dark.svg"
+					alt="SupaPoker Logo"
+					class="h-8 w-8"
+				/>
+				<ClientOnly v-else>
 					<UColorModeImage
 						light="/logo-pixel-light.svg"
 						dark="/logo-pixel-dark.svg"
@@ -104,11 +112,13 @@
 					to="/login"
 					variant="outline"
 					color="neutral"
+					:class="{ 'landing-login-button': landing }"
 				/>
 				<UButton
 					label="Sign up"
 					to="/signup"
 					color="primary"
+					:class="{ 'landing-signup-button': landing }"
 				/>
 			</div>
 			<UDropdownMenu
@@ -210,3 +220,23 @@
 		</template>
 	</UHeader>
 </template>
+
+<style scoped>
+:global(.landing-app-header) {
+	--ui-header-height: 4.5rem;
+	color: #f4f4f5 !important;
+	background: rgba(9, 9, 11, 0.92) !important;
+	border-bottom-color: rgba(255, 255, 255, 0.1) !important;
+	backdrop-filter: blur(18px);
+}
+
+:global(.landing-login-button) {
+	color: #a1a1aa !important;
+	background: transparent !important;
+	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16) !important;
+}
+
+:global(.landing-signup-button) { border-radius: 0; }
+
+:global(.landing-app-header button) { color: #a1a1aa; }
+</style>

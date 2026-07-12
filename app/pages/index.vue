@@ -1,101 +1,358 @@
 <script setup lang="ts">
-const { user } = useCurrentUser()
-
 definePageMeta({
   middleware: [
-    function (to, from) {
-      const { user } = useCurrentUser()
-      if (user.value) {
-        return navigateTo('/rooms')
-      }
+    async function () {
+      const { user, ready, refresh } = useCurrentUser()
+      if (!ready.value) await refresh()
+      if (user.value) return navigateTo('/rooms')
     }
   ]
 })
 
-const links = [
-  {
-    label: 'Get Started Free',
-    to: '/signup',
-    size: 'xl' as const,
-    icon: 'i-lucide-rocket',
-    color: 'primary' as const
-  },
-  {
-    label: 'Log in',
-    to: '/login',
-    size: 'xl' as const,
-    variant: 'ghost' as const,
-    icon: 'i-lucide-log-in',
-    color: 'neutral' as const
-  }
-]
+useSeoMeta({
+  title: 'SupaPoker — Planning poker without the ceremony',
+  description: 'A fast, real-time planning poker room for focused agile teams.'
+})
 
 const features = [
   {
-    title: 'Live Vote Sync',
-    description: 'Watch votes appear in real-time as your team submits them. No refresh needed, instant updates.',
-    icon: 'i-lucide-zap',
+    index: '01',
+    title: 'Live vote sync',
+    description: 'Votes appear the moment your team submits them. No refreshes, no waiting, no drift.',
+    icon: 'i-lucide-radio-tower'
   },
   {
-    title: 'Blind Voting',
-    description: 'Votes stay hidden until you reveal them. Keep estimations unbiased and focused on the work.',
-    icon: 'i-lucide-eye-off',
+    index: '02',
+    title: 'Blind by default',
+    description: 'Everyone thinks independently. Reveal together when the room is ready and keep estimates honest.',
+    icon: 'i-lucide-eye-off'
   },
   {
-    title: 'Story Workflow',
-    description: 'Track stories from backlog to completed. Manage your entire estimation process in one place.',
-    icon: 'i-lucide-kanban',
-  },
+    index: '03',
+    title: 'Stories stay in flow',
+    description: 'Move from backlog to vote to done without leaving the room or losing the conversation.',
+    icon: 'i-lucide-list-checks'
+  }
 ]
 </script>
 
 <template>
-  <div>
-    <UPageHero
-      description="Stop wasting time with complex tools. SupaPoker is the fastest way for your team to agree on story points and get back to work."
-      :links="links">
-      <template #title>
-        Agile prediction made <span class="text-primary-500">simple</span>
-      </template>
-    </UPageHero>
+  <div class="landing-page">
+    <section class="landing-hero" aria-labelledby="landing-title">
+      <div class="hero-glow" aria-hidden="true" />
+      <div class="hero-grid" aria-hidden="true" />
 
-    <UPageSection>
-      <div class="flex justify-center">
-        <ClientOnly>
-          <UiSafariMockup
-            url="supapoker.com/rooms/abc123"
-            src="/mockup.png"
-            class="size-full"
-          />
-        </ClientOnly>
-      </div>
-    </UPageSection>
+      <div class="hero-copy">
+        <div class="eyebrow reveal reveal-1">
+          <span class="eyebrow-dot" />
+          REAL-TIME PLANNING POKER
+        </div>
 
-    <UPageSection>
-      <UPageGrid>
-        <UPageFeature v-for="feature in features" :key="feature.title" v-bind="feature" />
-      </UPageGrid>
-    </UPageSection>
+        <h1 id="landing-title" class="reveal reveal-2">
+          Estimates without<br>
+          the <span>ceremony.</span>
+        </h1>
 
-    <UPageSection class="text-center border-3 border-blue-600">
-      <div class="max-w-2xl mx-auto">
-        <h2 class="text-3xl font-bold text-neutral-900 dark:text-white mb-4">
-          Ready to plan better?
-        </h2>
-        <p class="text-lg text-neutral-600 dark:text-neutral-400 mb-8">
-          Create a room in seconds and start estimating with your team. No credit card required.
+        <p class="hero-description reveal reveal-3">
+          SupaPoker gives your team one focused room to discuss, vote, and move on. No bloated workspace required.
         </p>
-        <div class="flex justify-center gap-4">
+
+        <div class="hero-actions reveal reveal-4">
           <UButton
             to="/signup"
             size="xl"
             color="primary"
-            icon="i-lucide-rocket"
+            trailing-icon="i-lucide-arrow-right"
+            class="landing-primary-button"
           >
-            Get Started Free
+            Start planning free
+          </UButton>
+          <UButton
+            to="/login"
+            size="xl"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-log-in"
+            class="landing-secondary-button"
+          >
+            Log in
           </UButton>
         </div>
+
+        <p class="hero-note reveal reveal-4">
+          <UIcon name="i-lucide-circle-check" />
+          Free to start · no credit card
+        </p>
       </div>
-    </UPageSection>
+    </section>
+
+    <section class="preview-section" aria-label="SupaPoker room preview">
+      <div class="preview-label">
+        <span>THE ROOM</span>
+        <span class="preview-status"><i /> LIVE PREVIEW</span>
+      </div>
+      <LandingRoomPreview />
+    </section>
+
+    <section class="features-section" aria-labelledby="features-title">
+      <div class="section-heading">
+        <p>BUILT FOR THE DECISION</p>
+        <h2 id="features-title">Everything between “ready?” and “done.”</h2>
+      </div>
+
+      <div class="features-grid">
+        <article v-for="feature in features" :key="feature.title" class="feature-card">
+          <span class="feature-index">{{ feature.index }}</span>
+          <UIcon :name="feature.icon" class="feature-icon" />
+          <h3>{{ feature.title }}</h3>
+          <p>{{ feature.description }}</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="landing-cta" aria-labelledby="cta-title">
+      <div class="cta-scanline" aria-hidden="true" />
+      <p>YOUR NEXT ESTIMATION SESSION</p>
+      <h2 id="cta-title">Less setup. Better signal.</h2>
+      <UButton
+        to="/signup"
+        size="xl"
+        color="primary"
+        trailing-icon="i-lucide-arrow-right"
+        class="landing-primary-button"
+      >
+        Create your first room
+      </UButton>
+    </section>
   </div>
 </template>
+
+<style scoped>
+.landing-page {
+  --landing-bg: #09090b;
+  --landing-panel: #0d0d10;
+  --landing-line: rgba(255, 255, 255, 0.11);
+  --landing-muted: #8b8b95;
+  position: relative;
+  overflow: hidden;
+  color: #f5f5f7;
+  background: var(--landing-bg);
+  border-inline: 1px solid var(--landing-line);
+}
+
+.landing-hero {
+  position: relative;
+  display: grid;
+  min-height: 640px;
+  place-items: center;
+  padding: 7rem 1.5rem 5rem;
+  text-align: center;
+  border-bottom: 1px solid var(--landing-line);
+  isolation: isolate;
+}
+
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  opacity: 0.3;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 52px 52px;
+  mask-image: linear-gradient(to bottom, black, transparent 92%);
+}
+
+.hero-glow {
+  position: absolute;
+  z-index: -1;
+  top: 6rem;
+  left: 50%;
+  width: min(760px, 90vw);
+  height: 380px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse, rgba(37, 99, 235, 0.15), transparent 67%);
+  filter: blur(12px);
+}
+
+.hero-copy { max-width: 880px; }
+
+.eyebrow,
+.preview-label,
+.section-heading > p,
+.landing-cta > p,
+.feature-index,
+.hero-note {
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #a1a1aa;
+  border: 1px solid var(--landing-line);
+  padding: 0.55rem 0.8rem;
+  background: rgba(9, 9, 11, 0.76);
+}
+
+.eyebrow-dot,
+.preview-status i {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: #3b82f6;
+  box-shadow: 0 0 12px #2563eb;
+}
+
+h1 {
+  margin-top: 1.8rem;
+  font-size: clamp(3.25rem, 8vw, 6.6rem);
+  font-weight: 450;
+  line-height: 0.98;
+  letter-spacing: -0.07em;
+  text-wrap: balance;
+  text-shadow: 0 0 35px rgba(255, 255, 255, 0.08);
+}
+
+h1 span { color: #3b82f6; }
+
+.hero-description {
+  max-width: 660px;
+  margin: 1.8rem auto 0;
+  color: var(--landing-muted);
+  font-size: clamp(0.95rem, 2vw, 1.1rem);
+  line-height: 1.75;
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.landing-primary-button {
+  border: 1px solid #60a5fa;
+  border-radius: 0;
+  box-shadow: 0 0 28px rgba(37, 99, 235, 0.18);
+}
+
+.landing-secondary-button {
+  color: #a1a1aa;
+  border-radius: 0;
+}
+
+.hero-note {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 1.25rem;
+  color: #62626c;
+  letter-spacing: 0.04em;
+}
+
+.preview-section { padding: 0 4.5rem 6rem; }
+
+.preview-label {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem 0;
+  color: #676771;
+}
+
+.preview-status { display: inline-flex; align-items: center; gap: 0.5rem; }
+.preview-status i { animation: live-pulse 2.2s ease-in-out infinite; }
+
+.features-section {
+  padding: 7rem 4.5rem;
+  border-top: 1px solid var(--landing-line);
+}
+
+.section-heading { max-width: 670px; }
+.section-heading > p,
+.landing-cta > p { color: #3b82f6; }
+
+.section-heading h2,
+.landing-cta h2 {
+  margin-top: 1rem;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 450;
+  line-height: 1.08;
+  letter-spacing: -0.05em;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 3.5rem;
+  border-top: 1px solid var(--landing-line);
+  border-left: 1px solid var(--landing-line);
+}
+
+.feature-card {
+  position: relative;
+  min-height: 285px;
+  padding: 2rem;
+  background: linear-gradient(145deg, rgba(255,255,255,0.018), transparent 55%);
+  border-right: 1px solid var(--landing-line);
+  border-bottom: 1px solid var(--landing-line);
+  transition: background-color 240ms ease;
+}
+
+.feature-card:hover { background-color: rgba(37, 99, 235, 0.05); }
+.feature-index { position: absolute; top: 1.15rem; right: 1.2rem; color: #44444c; }
+.feature-icon { width: 1.6rem; height: 1.6rem; margin-top: 2.4rem; color: #3b82f6; }
+.feature-card h3 { margin-top: 2rem; font-size: 1.1rem; font-weight: 600; }
+.feature-card p { margin-top: 0.8rem; color: var(--landing-muted); font-size: 0.83rem; line-height: 1.7; }
+
+.landing-cta {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  padding: 7rem 1.5rem;
+  text-align: center;
+  border-top: 1px solid var(--landing-line);
+  background: radial-gradient(circle at 50% 120%, rgba(37, 99, 235, 0.2), transparent 48%);
+  overflow: hidden;
+}
+
+.landing-cta .landing-primary-button { margin-top: 2rem; }
+.cta-scanline { position: absolute; inset: 0; opacity: 0.16; background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(255,255,255,.025) 3px 4px); pointer-events: none; }
+
+.reveal { animation: reveal-up 700ms cubic-bezier(.22,.8,.28,1) both; }
+.reveal-1 { animation-delay: 60ms; }
+.reveal-2 { animation-delay: 130ms; }
+.reveal-3 { animation-delay: 210ms; }
+.reveal-4 { animation-delay: 290ms; }
+
+@keyframes reveal-up {
+  from { opacity: 0; transform: translateY(12px); filter: blur(5px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+@keyframes live-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@media (max-width: 820px) {
+  .landing-hero { min-height: 590px; padding-top: 5rem; }
+  .preview-section { padding: 0 1rem 4rem; }
+  .features-section { padding: 5rem 1.25rem; }
+  .features-grid { grid-template-columns: 1fr; }
+  .feature-card { min-height: 230px; }
+}
+
+@media (max-width: 520px) {
+  h1 { font-size: 3.25rem; }
+  .hero-actions { flex-direction: column; align-items: stretch; }
+  .preview-label { font-size: 0.6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .preview-status i { animation: none; }
+}
+</style>
