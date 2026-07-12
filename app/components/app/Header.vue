@@ -62,13 +62,6 @@
 				:style="landing ? { color: '#f4f4f5' } : undefined"
 			>
 				<img
-					v-if="landing"
-					src="/logo-pixel-dark.svg"
-					alt="SupaPoker Logo"
-					class="h-8 w-8"
-				/>
-				<img
-					v-else
 					src="/logo-pixel-dark.svg"
 					alt="SupaPoker Logo"
 					class="h-8 w-8"
