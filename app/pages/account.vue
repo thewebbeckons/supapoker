@@ -15,9 +15,6 @@ const { user } = useCurrentUser()
         <!-- Profile Section -->
         <AccountProfile />
 
-        <!-- Appearance Section -->
-        <AccountAppearance />
-
         <!-- Password Section -->
         <AccountPasswordChange v-if="user" />
     </div>

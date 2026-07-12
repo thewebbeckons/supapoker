@@ -2,9 +2,27 @@
 @import "@nuxt/ui";
 
 @theme {
-  --font-sans: 'JetBrains Mono', monospace;  
+  --font-sans: "JetBrains Mono", monospace;
 }
 
 :root {
   --ui-radius: 0;
+  color-scheme: dark;
+}
+
+.dark {
+  --ui-primary: var(--ui-color-primary-500);
+  --ui-text-dimmed: #62626c;
+  --ui-text-muted: #8b8b95;
+  --ui-text-toned: #a1a1aa;
+  --ui-text: #d4d4d8;
+  --ui-text-highlighted: #f5f5f7;
+  --ui-bg: #09090b;
+  --ui-bg-muted: #0d0d10;
+  --ui-bg-elevated: #101014;
+  --ui-bg-accented: #18181b;
+  --ui-border: rgb(255 255 255 / 11%);
+  --ui-border-muted: rgb(255 255 255 / 7%);
+  --ui-border-accented: rgb(255 255 255 / 16%);
+  --ui-border-inverted: #f5f5f7;
 }

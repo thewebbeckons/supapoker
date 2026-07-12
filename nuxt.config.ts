@@ -23,6 +23,9 @@ export default defineNuxtConfig({
     "@nuxt/hints",
     "nuxt-email-renderer",
   ],
+  ui: {
+    colorMode: false,
+  },
   css: ["~/assets/css/main.css"],
   hub: {
     db: {
@@ -58,6 +61,13 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
+      htmlAttrs: {
+        class: "dark",
+      },
+      meta: [
+        { name: "color-scheme", content: "dark" },
+        { name: "theme-color", content: "#09090b" },
+      ],
       link: [
         { rel: "icon", type: "image/svg+xml", href: "/logo-pixel-dark.svg" },
       ],
