@@ -175,6 +175,16 @@ const { votes, selectedCard, selectCard } = useRoomVotes(
 
 const { players, pokeUsers, lastPokeId } = useRoomPresence(roomId, realtime);
 
+const allVotesCounted = computed(() => {
+    if (!isVoting.value) return false;
+
+    const onlinePlayers = players.value.filter((player) => player.isOnline);
+    return (
+        onlinePlayers.length > 0 &&
+        onlinePlayers.every((player) => votes.value[player.id] !== undefined)
+    );
+});
+
 watch(lastPokeId, (value) => {
     if (!value) return;
     pokeBurstKey.value += 1;
@@ -358,7 +368,7 @@ watch(stories, (nextStories) => {
                 </header>
 
                 <section class="vote-stage">
-                    <div v-if="canEdit && isVoted" class="vote-complete-badge" aria-live="polite">
+                    <div v-if="canEdit && allVotesCounted" class="vote-complete-badge" aria-live="polite">
                         <UBadge
                             label="All votes counted"
                             icon="i-lucide-circle-check"
@@ -594,6 +604,16 @@ watch(stories, (nextStories) => {
     position: absolute;
     top: 1.25rem;
     right: 1.25rem;
+    animation: vote-complete-enter 540ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes vote-complete-enter {
+    0% { opacity: 0; transform: translateY(-0.4rem) scale(0.96); }
+    48% { opacity: 1; transform: translateY(0) scale(1); }
+    64% { transform: translateX(-2px); }
+    78% { transform: translateX(2px); }
+    90% { transform: translateX(-1px); }
+    100% { opacity: 1; transform: translateX(0); }
 }
 
 .current-story { margin-bottom: 2.6rem; text-align: center; }
@@ -623,5 +643,9 @@ watch(stories, (nextStories) => {
     .room-header > div > p:last-child { max-width: 15rem; }
     .current-story { margin-bottom: 2rem; }
     .vote-complete-badge { top: 0.75rem; right: 0.75rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vote-complete-badge { animation: none; }
 }
 </style>
