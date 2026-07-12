@@ -1,8 +1,9 @@
 <script setup lang="ts">
 definePageMeta({
   middleware: [
-    function () {
-      const { user } = useCurrentUser()
+    async function () {
+      const { user, ready, refresh } = useCurrentUser()
+      if (!ready.value) await refresh()
       if (user.value) return navigateTo('/rooms')
     }
   ]

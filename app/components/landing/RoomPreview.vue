@@ -74,7 +74,10 @@ function pokeTeam() {
           <div class="stories-tabs"><b>ACTIVE STORIES</b><span>COMPLETED</span><span>ALL</span></div>
           <div class="story-list">
             <div v-for="story in stories" :key="story.title" :class="`story-${story.status}`">
-              <UIcon :name="story.status === 'done' ? 'i-lucide-circle-check' : story.status === 'active' ? 'i-lucide-play' : 'i-lucide-circle'" />
+              <UIcon
+                :name="story.status === 'done' ? 'i-lucide-circle-check' : story.status === 'active' ? 'i-lucide-play' : 'i-lucide-circle'"
+                class="story-icon"
+              />
               <span>{{ story.title }}</span>
               <small>{{ story.status }}</small>
             </div>
@@ -186,10 +189,10 @@ function pokeTeam() {
 .stories-tabs b { align-self: stretch; display: flex; align-items: center; color: #a1a1aa; border-bottom: 1px solid #3b82f6; }
 .story-list > div { display: grid; grid-template-columns: 18px 1fr auto; align-items: center; min-height: 38px; padding: 0 1.25rem; color: #797983; font-size: .66rem; border-bottom: 1px solid rgba(255,255,255,.045); }
 .story-list > div:last-child { border-bottom: 0; }
-.story-list svg { width: 12px; color: #4b4b55; }
+.story-icon { width: 12px; height: 12px; color: #4b4b55; }
 .story-list small { color: #45454d; }
 .story-list .story-active { color: #d4d4d8; background: rgba(37,99,235,.05); box-shadow: inset 2px 0 #2563eb; }
-.story-list .story-active svg, .story-list .story-active small { color: #3b82f6; }
+.story-list .story-active .story-icon, .story-list .story-active small { color: #3b82f6; }
 
 .room-sidebar { display: flex; flex-direction: column; padding: 1.35rem 1rem; border-left: 1px solid rgba(255,255,255,.09); background: #0c0c0f; }
 .sidebar-heading { display: flex; align-items: center; justify-content: space-between; color: #666670; }
