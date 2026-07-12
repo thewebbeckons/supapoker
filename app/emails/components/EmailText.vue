@@ -17,9 +17,9 @@ const fontStack =
 
 const textStyle = computed(() => ({
   margin: props.margin,
-  color: props.tone === "muted" ? "#52525b" : "#18181b",
+  color: props.tone === "muted" ? "#8b8b95" : "#d4d4d8",
   fontFamily: fontStack,
-  fontSize: "15px",
+  fontSize: "14px",
   lineHeight: "1.7",
 }));
 </script>
