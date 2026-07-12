@@ -1,33 +1,39 @@
 <script lang="ts" setup>
-defineProps<{
+const { canEdit } = defineProps<{
     canEdit: boolean
 }>()
 
 const emit = defineEmits<{
     (e: 'new-story'): void
+    (e: 'invite-teammate'): void
     (e: 'edit-room'): void
     (e: 'delete-room'): void
-    (e: 'poke-users'): void
 }>()
 
-const settingsItems = computed(() => [
-    [{
-        label: 'Poke Users',
-        icon: 'i-lucide-megaphone',
-        onSelect: () => emit('poke-users')
-    }],
-    [{
-        label: 'Edit Room Details',
-        icon: 'i-lucide-pencil',
-        onSelect: () => emit('edit-room')
-    }],
-    [{
-        label: 'Delete Room',
-        icon: 'i-lucide-trash-2',
-        color: 'error' as const,
-        onSelect: () => emit('delete-room')
+const settingsItems = computed(() => {
+    const inviteItems = [{
+        label: 'Invite teammate',
+        icon: 'i-lucide-copy',
+        onSelect: () => emit('invite-teammate')
     }]
-])
+
+    if (!canEdit) return [inviteItems]
+
+    return [
+        inviteItems,
+        [{
+            label: 'Edit Room Details',
+            icon: 'i-lucide-pencil',
+            onSelect: () => emit('edit-room')
+        }],
+        [{
+            label: 'Delete Room',
+            icon: 'i-lucide-trash-2',
+            color: 'error' as const,
+            onSelect: () => emit('delete-room')
+        }]
+    ]
+})
 </script>
 
 <template>
@@ -35,7 +41,7 @@ const settingsItems = computed(() => [
         <UButton v-if="canEdit" label="New story" icon="i-lucide-plus" color="primary" variant="subtle" size="sm"
             @click="emit('new-story')" />
 
-        <UDropdownMenu v-if="canEdit" :items="settingsItems" :content="{ align: 'end', side: 'bottom' }">
+        <UDropdownMenu :items="settingsItems" :content="{ align: 'end', side: 'bottom' }">
             <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="sm" aria-label="Room settings" />
         </UDropdownMenu>
     </div>

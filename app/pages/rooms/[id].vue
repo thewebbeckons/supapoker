@@ -1,4 +1,5 @@
 <script lang="ts" setup>
+import { useClipboard } from "@vueuse/core";
 import type { Room, Story, TransferCandidate } from "~/types/room";
 
 definePageMeta({
@@ -10,6 +11,7 @@ const route = useRoute();
 const roomId = computed(() => String(route.params.id));
 const { user } = useCurrentUser();
 const toast = useToast();
+const { copy } = useClipboard();
 
 const isEditModalOpen = ref(false);
 const isDeleteModalOpen = ref(false);
@@ -226,6 +228,25 @@ async function onRoomEditSuccess() {
     await Promise.all([refresh(), realtime.refresh()]);
 }
 
+function copyRoomUrl(): void {
+    const inviteUrl = new URL(window.location.href);
+
+    if (room.value?.name) {
+        inviteUrl.searchParams.set("roomName", room.value.name);
+    }
+
+    if (room.value?.description) {
+        inviteUrl.searchParams.set("roomDescription", room.value.description);
+    }
+
+    copy(inviteUrl.toString());
+    toast.add({
+        title: "Copied!",
+        description: "Room URL copied to clipboard.",
+        color: "success",
+    });
+}
+
 watch(stories, (nextStories) => {
     const selected = selectedStory.value;
     if (!selected) return;
@@ -330,9 +351,9 @@ watch(stories, (nextStories) => {
                     <RoomControls
                         :can-edit="canEdit"
                         @new-story="isNewStoryModalOpen = true"
+                        @invite-teammate="copyRoomUrl"
                         @edit-room="openEditModal"
                         @delete-room="isDeleteModalOpen = true"
-                        @poke-users="pokeUsers"
                     />
                 </header>
 
@@ -453,7 +474,6 @@ watch(stories, (nextStories) => {
                 :active-story="activeStory"
                 :is-voted="isVoted"
                 :votes="votes"
-                :room="room ?? null"
                 :connection-status="connectionStatus"
                 @poke-users="pokeUsers"
             />
@@ -539,14 +559,14 @@ watch(stories, (nextStories) => {
 .room-kicker,
 .current-story > span,
 .story-state {
-    font-size: 0.64rem;
+    font-size: 0.72rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
 }
 
-.room-kicker { color: #3b82f6; }
-.room-header h1 { margin-top: 0.35rem; color: #f4f4f5; font-size: 1.15rem; font-weight: 600; }
-.room-header > div > p:last-child { margin-top: 0.25rem; color: #686871; font-size: 0.75rem; }
+.room-kicker { color: #60a5fa; }
+.room-header h1 { margin-top: 0.4rem; color: #fafafa; font-size: 1.35rem; font-weight: 600; }
+.room-header > div > p:last-child { margin-top: 0.3rem; color: #92929c; font-size: 0.86rem; }
 
 .vote-stage {
     display: grid;
@@ -559,14 +579,14 @@ watch(stories, (nextStories) => {
 }
 
 .current-story { margin-bottom: 2.6rem; text-align: center; }
-.current-story > span { color: #60606a; }
-.current-story h2 { max-width: 48rem; margin-top: 0.65rem; color: #f4f4f5; font-size: clamp(1rem, 2vw, 1.35rem); font-weight: 500; }
-.story-state { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.8rem; color: #71717a; letter-spacing: 0.08em; }
-.story-state.live { color: #60a5fa; }
+.current-story > span { color: #888892; }
+.current-story h2 { max-width: 48rem; margin-top: 0.7rem; color: #fafafa; font-size: clamp(1.2rem, 2vw, 1.55rem); font-weight: 500; }
+.story-state { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.85rem; color: #92929c; letter-spacing: 0.08em; }
+.story-state.live { color: #7ab8ff; }
 .story-state > i { width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
 .story-state :deep(.room-timer) { margin-left: 0.35rem; }
 .vote-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 1.25rem; }
-.empty-story-copy { margin-top: 0.55rem; color: #5c5c65; font-size: 0.72rem; }
+.empty-story-copy { margin-top: 0.6rem; color: #85858f; font-size: 0.82rem; }
 
 @media (max-width: 960px) {
     .room-shell { grid-template-columns: minmax(0, 1fr) 14rem; }
@@ -581,7 +601,7 @@ watch(stories, (nextStories) => {
 
 @media (max-width: 520px) {
     .room-header { align-items: flex-start; gap: 1rem; }
-    .room-header h1 { font-size: 1rem; }
+    .room-header h1 { font-size: 1.2rem; }
     .room-header > div > p:last-child { max-width: 15rem; }
     .current-story { margin-bottom: 2rem; }
 }

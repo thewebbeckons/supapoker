@@ -107,17 +107,17 @@ const averageVote = computed(() => {
 <style scoped>
 .vote-results { display: grid; width: 100%; max-width: 38rem; grid-template-columns: 8rem minmax(0, 1fr); gap: 2rem; align-items: center; }
 .average-vote { display: flex; flex-direction: column; align-items: center; }
-.average-vote span, .distribution > p { color: #60606a; font-size: 0.58rem; letter-spacing: 0.14em; }
+.average-vote span, .distribution > p { color: #888892; font-size: 0.68rem; letter-spacing: 0.14em; }
 .average-vote strong { display: grid; width: 7rem; height: 9rem; margin-top: 0.75rem; place-items: center; color: #93c5fd; border: 1px solid #3b82f6; background: #0d1930; box-shadow: 0 16px 30px rgba(0, 0, 0, 0.32); font-size: 2.25rem; font-weight: 500; }
-.no-average, .no-votes { color: #62626c; font-size: 0.68rem; text-align: center; }
+.no-average, .no-votes { color: #85858f; font-size: 0.78rem; text-align: center; }
 .tallies { display: grid; gap: 0.55rem; margin-top: 1rem; }
 .tally-row { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr) 4rem; gap: 0.75rem; align-items: center; }
-.result-card { display: grid; width: 2.25rem; height: 2.8rem; place-items: center; color: #a1a1aa; border: 1px solid #29292f; background: #101014; font-size: 0.85rem; }
+.result-card { display: grid; width: 2.4rem; height: 3rem; place-items: center; color: #c4c4cc; border: 1px solid #3a3a42; background: #101014; font-size: 0.95rem; }
 .bar-track { height: 2px; overflow: hidden; background: #202026; }
 .bar-track i { display: block; height: 100%; background: #2563eb; box-shadow: 0 0 8px #2563eb; transition: width 500ms ease; }
 .bar-track i.neutral { background: #71717a; box-shadow: none; }
-.tally-count { color: #62626c; font-size: 0.58rem; text-align: right; }
-.vote-summary { grid-column: 1 / -1; color: #52525b; font-size: 0.62rem; text-align: center; }
+.tally-count { color: #85858f; font-size: 0.68rem; text-align: right; }
+.vote-summary { grid-column: 1 / -1; color: #777781; font-size: 0.72rem; text-align: center; }
 
 @media (max-width: 560px) {
     .vote-results { grid-template-columns: 1fr; gap: 1.5rem; }
