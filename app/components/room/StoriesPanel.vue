@@ -99,10 +99,10 @@ function statusIcon(status: Story['status']) {
 <style scoped>
 .stories-panel { border-top: 1px solid rgba(255, 255, 255, 0.08); background: #0a0a0c; }
 .stories-tabs { display: flex; min-height: 2.75rem; align-items: stretch; gap: 1.5rem; padding: 0 1.4rem; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
-.stories-tabs button { display: flex; align-items: center; gap: 0.4rem; color: #777781; border-bottom: 1px solid transparent; font-size: 0.66rem; letter-spacing: 0.11em; text-transform: uppercase; cursor: pointer; }
+.stories-tabs button { display: flex; align-items: center; gap: 0.4rem; color: #a1a1aa; border-bottom: 1px solid transparent; font-size: 0.66rem; letter-spacing: 0.11em; text-transform: uppercase; cursor: pointer; }
 .stories-tabs button:hover { color: #c4c4cc; }
 .stories-tabs button.active { color: #d4d4d8; border-bottom-color: #3b82f6; }
-.stories-tabs small { display: grid; min-width: 1.1rem; height: 1.1rem; place-items: center; color: #92929c; border: 1px solid #34343b; font-size: 0.58rem; letter-spacing: 0; }
+.stories-tabs small { display: grid; min-width: 1.1rem; height: 1.1rem; place-items: center; color: #b4b4bd; border: 1px solid #34343b; font-size: 0.58rem; letter-spacing: 0; }
 .story-list { min-height: 8.5rem; max-height: 13rem; overflow-y: auto; }
 .story-row { display: grid; grid-template-columns: 1rem minmax(0, 1fr) auto auto; align-items: center; gap: 0.7rem; min-height: 2.9rem; padding: 0 1.4rem; color: #a1a1aa; border-bottom: 1px solid rgba(255, 255, 255, 0.06); font-size: 0.78rem; }
 .story-row:last-child { border-bottom: 0; }
@@ -111,11 +111,11 @@ function statusIcon(status: Story['status']) {
 .story-icon { width: 0.82rem; height: 0.82rem; color: #71717a; }
 .current .story-icon, .current .story-status { color: #3b82f6; }
 .story-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.story-status { color: #777781; font-size: 0.63rem; letter-spacing: 0.12em; text-transform: uppercase; }
+.story-status { color: #a1a1aa; font-size: 0.63rem; letter-spacing: 0.12em; text-transform: uppercase; }
 .story-actions { display: flex; min-width: 5.5rem; justify-content: flex-end; opacity: 0.38; transition: opacity 160ms ease; }
 .story-row:hover .story-actions, .story-actions:focus-within { opacity: 1; }
 .story-actions :deep(button) { border-radius: 0; }
-.empty-stories { display: flex; min-height: 8.5rem; align-items: center; justify-content: center; gap: 0.55rem; color: #777781; font-size: 0.78rem; }
+.empty-stories { display: flex; min-height: 8.5rem; align-items: center; justify-content: center; gap: 0.55rem; color: #a1a1aa; font-size: 0.78rem; }
 .empty-stories :deep(svg) { width: 0.9rem; height: 0.9rem; }
 
 @media (max-width: 560px) {

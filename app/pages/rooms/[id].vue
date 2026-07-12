@@ -358,6 +358,16 @@ watch(stories, (nextStories) => {
                 </header>
 
                 <section class="vote-stage">
+                    <div v-if="canEdit && isVoted" class="vote-complete-badge" aria-live="polite">
+                        <UBadge
+                            label="All votes counted"
+                            icon="i-lucide-circle-check"
+                            color="success"
+                            variant="subtle"
+                            size="sm"
+                        />
+                    </div>
+
                     <div class="current-story">
                         <template v-if="activeStory">
                             <span>CURRENT STORY</span>
@@ -567,9 +577,10 @@ watch(stories, (nextStories) => {
 
 .room-kicker { color: #60a5fa; }
 .room-header h1 { margin-top: 0.4rem; color: #fafafa; font-size: 1.35rem; font-weight: 600; }
-.room-header > div > p:last-child { margin-top: 0.3rem; color: #92929c; font-size: 0.86rem; }
+.room-header > div > p:last-child { margin-top: 0.3rem; color: #b4b4bd; font-size: 0.86rem; }
 
 .vote-stage {
+    position: relative;
     display: grid;
     flex: 1;
     align-content: center;
@@ -579,15 +590,21 @@ watch(stories, (nextStories) => {
     background: radial-gradient(circle at 50% 42%, rgba(37, 99, 235, 0.075), transparent 42%);
 }
 
+.vote-complete-badge {
+    position: absolute;
+    top: 1.25rem;
+    right: 1.25rem;
+}
+
 .current-story { margin-bottom: 2.6rem; text-align: center; }
-.current-story > span { color: #888892; }
+.current-story > span { color: #a8a8b2; }
 .current-story h2 { max-width: 48rem; margin-top: 0.7rem; color: #fafafa; font-size: clamp(1.2rem, 2vw, 1.55rem); font-weight: 500; }
-.story-state { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.85rem; color: #92929c; letter-spacing: 0.08em; }
+.story-state { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.85rem; color: #b4b4bd; letter-spacing: 0.08em; }
 .story-state.live { color: #7ab8ff; }
 .story-state > i { width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
 .story-state :deep(.room-timer) { margin-left: 0.35rem; }
 .vote-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 1.25rem; }
-.empty-story-copy { margin-top: 0.6rem; color: #85858f; font-size: 0.82rem; }
+.empty-story-copy { margin-top: 0.6rem; color: #a8a8b2; font-size: 0.82rem; }
 
 @media (max-width: 960px) {
     .room-shell { grid-template-columns: minmax(0, 1fr) 14rem; }
@@ -605,5 +622,6 @@ watch(stories, (nextStories) => {
     .room-header h1 { font-size: 1.2rem; }
     .room-header > div > p:last-child { max-width: 15rem; }
     .current-story { margin-bottom: 2rem; }
+    .vote-complete-badge { top: 0.75rem; right: 0.75rem; }
 }
 </style>

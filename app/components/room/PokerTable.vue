@@ -72,7 +72,7 @@ function selectCard(value: string) {
 <style scoped>
 .poker-table { width: 100%; max-width: 58rem; }
 .card-grid { display: grid; grid-template-columns: repeat(13, minmax(42px, 1fr)); gap: clamp(0.35rem, 0.8vw, 0.75rem); }
-.poker-card { position: relative; display: flex; min-width: 0; height: 6.75rem; align-items: center; justify-content: center; color: #9a9aa4; border: 1px solid #34343b; background: #101014; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12); transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease; cursor: pointer; }
+.poker-card { position: relative; display: flex; min-width: 0; height: 6.75rem; align-items: center; justify-content: center; color: #b4b4bd; border: 1px solid #34343b; background: #101014; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12); transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease; cursor: pointer; }
 .poker-card:hover:not(:disabled) { color: #d4d4d8; border-color: #4b4b55; transform: translateY(-4px); box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28); }
 .poker-card:focus-visible { outline: 1px solid #60a5fa; outline-offset: 3px; }
 .poker-card:disabled { cursor: not-allowed; opacity: 0.58; }
@@ -83,7 +83,7 @@ function selectCard(value: string) {
 .card-corner :deep(svg) { width: 0.55rem; height: 0.55rem; }
 .card-corner-top { top: 0.45rem; left: 0.5rem; }
 .card-corner-bottom { right: 0.5rem; bottom: 0.45rem; transform: rotate(180deg); }
-.selection-note { display: flex; min-height: 1rem; align-items: center; justify-content: center; gap: 0.45rem; margin-top: 1.7rem; color: #85858f; font-size: 0.75rem; }
+.selection-note { display: flex; min-height: 1rem; align-items: center; justify-content: center; gap: 0.45rem; margin-top: 1.7rem; color: #a8a8b2; font-size: 0.75rem; }
 .selection-note b { color: #93c5fd; }
 
 @media (max-width: 1180px) {
