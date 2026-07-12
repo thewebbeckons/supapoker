@@ -475,6 +475,7 @@ watch(stories, (nextStories) => {
                 :is-voted="isVoted"
                 :votes="votes"
                 :connection-status="connectionStatus"
+                :can-poke="canEdit"
                 @poke-users="pokeUsers"
             />
         </div>

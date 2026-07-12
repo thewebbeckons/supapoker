@@ -8,7 +8,8 @@ const props = defineProps<{
     activeStory: any,
     isVoted: boolean,
     votes: Record<string, string>,
-    connectionStatus: RoomConnectionStatus
+    connectionStatus: RoomConnectionStatus,
+    canPoke: boolean
 }>()
 
 const emit = defineEmits<{
@@ -91,6 +92,7 @@ const voteProgress = computed(() => {
             </div>
 
             <UButton
+                v-if="canPoke"
                 block
                 color="neutral"
                 variant="ghost"

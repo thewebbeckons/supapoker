@@ -28,7 +28,10 @@ const isTransferring = ref(false)
 
 const isOpen = computed({
     get: () => props.modelValue,
-    set: (value) => emit('update:modelValue', value)
+    set: (value) => {
+        if (!value && isTransferring.value) return
+        emit('update:modelValue', value)
+    }
 })
 
 const hasTransferCandidates = computed(() => props.transferCandidates.length > 0)
@@ -85,31 +88,32 @@ function cancelTransferConfirmation() {
 }
 
 async function transferAdmin() {
-    if (isTransferring.value || !props.room || !selectedTransferTarget.value) return
+    const transferTarget = selectedTransferTarget.value
+    if (isTransferring.value || isUpdating.value || !props.room || !transferTarget) return
 
     isTransferring.value = true
     try {
         await $fetch(`/api/rooms/${props.room.id}`, {
             method: 'PATCH',
             body: {
-                adminUserId: selectedTransferTarget.value.id,
+                adminUserId: transferTarget.id,
             },
         })
-
-        toast.add({
-            title: 'Admin transferred',
-            description: `${selectedTransferTarget.value.name} is now the room admin.`,
-            color: 'success',
-        })
-        emit('success')
-        isOpen.value = false
     } finally {
         isTransferring.value = false
     }
+
+    isOpen.value = false
+    toast.add({
+        title: 'Room transferred',
+        description: `${transferTarget.name} is now the room admin.`,
+        color: 'success',
+    })
+    emit('success')
 }
 
 async function updateRoom() {
-    if (!editName.value.trim() || !props.room) return
+    if (isUpdating.value || isTransferring.value || !editName.value.trim() || !props.room) return
 
     isUpdating.value = true
     try {
@@ -138,10 +142,28 @@ async function updateRoom() {
         v-model:open="isOpen"
         title="Edit Room"
         description="Update room details."
+        :close="!isTransferring"
+        :dismissible="!isTransferring"
         :ui="{ content: 'sm:max-w-2xl' }"
     >
         <template #body>
-            <div class="flex flex-col gap-5">
+            <fieldset
+                :disabled="isTransferring"
+                :aria-busy="isTransferring"
+                class="relative flex min-w-0 flex-col gap-5"
+            >
+                <div
+                    v-if="isTransferring"
+                    class="absolute inset-0 z-10 flex items-center justify-center rounded-lg bg-white/80 backdrop-blur-[1px] dark:bg-neutral-950/80"
+                    role="status"
+                    aria-live="polite"
+                >
+                    <div class="flex items-center gap-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">
+                        <UIcon name="i-lucide-loader-circle" class="size-5 animate-spin" />
+                        Transferring room…
+                    </div>
+                </div>
+
                 <UFormField label="Room Name" required>
                     <UInput
                         v-model="editName"
@@ -270,7 +292,7 @@ async function updateRoom() {
                         :loading="isUpdating"
                     />
                 </div>
-            </div>
+            </fieldset>
         </template>
     </UModal>
 </template>

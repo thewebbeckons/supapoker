@@ -17,7 +17,7 @@ const settingsItems = computed(() => {
         onSelect: () => emit('invite-teammate')
     }]
 
-    if (!canEdit) return [inviteItems]
+    if (!canEdit) return []
 
     return [
         inviteItems,
@@ -41,7 +41,7 @@ const settingsItems = computed(() => {
         <UButton v-if="canEdit" label="New story" icon="i-lucide-plus" color="primary" variant="subtle" size="sm"
             @click="emit('new-story')" />
 
-        <UDropdownMenu :items="settingsItems" :content="{ align: 'end', side: 'bottom' }">
+        <UDropdownMenu v-if="canEdit" :items="settingsItems" :content="{ align: 'end', side: 'bottom' }">
             <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="sm" aria-label="Room settings" />
         </UDropdownMenu>
     </div>
