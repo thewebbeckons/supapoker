@@ -1,9 +1,19 @@
+<script setup lang="ts">
+const route = useRoute()
+const isLandingPage = computed(() => route.path === '/')
+</script>
+
 <template>
-    <div class="space-y-8">
-        <AppHeader />
-        <UContainer class="xl:px-0">
+    <div :class="isLandingPage ? 'landing-layout' : 'space-y-8'">
+        <AppHeader :landing="isLandingPage" />
+        <UContainer :class="isLandingPage ? 'landing-container' : 'xl:px-0'">
             <slot />
         </UContainer>
-        <AppFooter />
+        <AppFooter :landing="isLandingPage" />
     </div>
 </template>
+
+<style scoped>
+.landing-layout { background: #09090b; }
+.landing-container { max-width: 90rem; padding-inline: 0; }
+</style>
