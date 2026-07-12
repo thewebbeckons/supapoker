@@ -63,83 +63,64 @@ const averageVote = computed(() => {
     return (sum / numericVotes.length).toFixed(1)
 })
 
-// Get color class based on value
-function getBarColor(value: string): string {
-    if (NON_NUMERIC_VALUES.includes(value)) {
-        return 'bg-neutral-400 dark:bg-neutral-600'
-    }
-    return 'bg-primary-500 dark:bg-primary-400'
-}
 </script>
 
 <template>
-    <div class="flex flex-col items-center gap-8 w-full max-w-2xl mx-auto">
-        <!-- Average Vote Display -->
-        <div v-if="averageVote !== null" class="text-center">
-            <p class="text-sm font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-2">
-                Average Vote
-            </p>
-            <div
-                class="text-6xl font-bold text-primary-600 dark:text-primary-400 bg-primary-50 dark:bg-primary-950/30 rounded-2xl px-8 py-4 border-2 border-primary-200 dark:border-primary-800">
-                {{ averageVote }}
-            </div>
+    <div class="vote-results">
+        <div v-if="averageVote !== null" class="average-vote">
+            <span>AVERAGE VOTE</span>
+            <strong>{{ averageVote }}</strong>
         </div>
-        <div v-else class="text-center">
-            <p class="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-                No numeric votes to calculate average
-            </p>
+        <div v-else class="no-average">
+            No numeric votes to calculate an average
         </div>
 
-        <!-- Vote Distribution Bar Chart -->
-        <div class="w-full">
-            <p class="text-sm font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide mb-4">
-                Vote Distribution
-            </p>
+        <div class="distribution">
+            <p>VOTE DISTRIBUTION</p>
 
-            <div v-if="voteTallies.length === 0" class="text-center text-neutral-400 py-8">
+            <div v-if="voteTallies.length === 0" class="no-votes">
                 No votes recorded
             </div>
 
-            <div v-else class="space-y-3">
-                <div v-for="tally in voteTallies" :key="tally.value"
-                    class="flex items-center gap-4 group hover:bg-neutral-50 dark:hover:bg-neutral-800/30 rounded-lg p-2 -mx-2 transition-colors">
-                    <!-- Card Label -->
-                    <div
-                        class="w-12 h-12 flex items-center justify-center rounded-lg border-2 border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 shrink-0">
+            <div v-else class="tallies">
+                <div v-for="tally in voteTallies" :key="tally.value" class="tally-row">
+                    <div class="result-card">
                         <span v-if="tally.value === '☕'" class="text-xl">☕</span>
-                        <span v-else class="text-xl font-medium text-neutral-700 dark:text-neutral-200">
-                            {{ tally.label }}
-                        </span>
+                        <span v-else>{{ tally.label }}</span>
                     </div>
 
-                    <!-- Bar -->
-                    <div class="flex-1 h-10 bg-neutral-100 dark:bg-neutral-800 rounded-lg overflow-hidden relative">
-                        <div class="h-full rounded-lg transition-all duration-500 ease-out flex items-center justify-end pr-3"
-                            :class="getBarColor(tally.value)" :style="{ width: `${(tally.count / maxCount) * 100}%` }">
-                            <span v-if="(tally.count / maxCount) > 0.2"
-                                class="text-sm font-bold text-white whitespace-nowrap">
-                                {{ tally.count }} vote{{ tally.count !== 1 ? 's' : '' }}
-                            </span>
-                        </div>
-                        <span v-if="(tally.count / maxCount) <= 0.2"
-                            class="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-neutral-600 dark:text-neutral-300">
-                            {{ tally.count }} vote{{ tally.count !== 1 ? 's' : '' }}
-                        </span>
+                    <div class="bar-track">
+                        <i :class="{ neutral: !tally.isNumeric }" :style="{ width: `${(tally.count / maxCount) * 100}%` }" />
                     </div>
 
-                    <!-- Percentage -->
-                    <div class="w-16 text-right shrink-0">
-                        <span class="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-                            {{ Math.round((tally.count / totalVotes) * 100) }}%
-                        </span>
-                    </div>
+                    <span class="tally-count">{{ tally.count }} · {{ Math.round((tally.count / totalVotes) * 100) }}%</span>
                 </div>
             </div>
         </div>
 
-        <!-- Summary -->
-        <div class="text-center text-sm text-neutral-400 dark:text-neutral-500">
+        <div class="vote-summary">
             {{ totalVotes }} total vote{{ totalVotes !== 1 ? 's' : '' }}
         </div>
     </div>
 </template>
+
+<style scoped>
+.vote-results { display: grid; width: 100%; max-width: 38rem; grid-template-columns: 8rem minmax(0, 1fr); gap: 2rem; align-items: center; }
+.average-vote { display: flex; flex-direction: column; align-items: center; }
+.average-vote span, .distribution > p { color: #60606a; font-size: 0.58rem; letter-spacing: 0.14em; }
+.average-vote strong { display: grid; width: 7rem; height: 9rem; margin-top: 0.75rem; place-items: center; color: #93c5fd; border: 1px solid #3b82f6; background: #0d1930; box-shadow: 0 16px 30px rgba(0, 0, 0, 0.32); font-size: 2.25rem; font-weight: 500; }
+.no-average, .no-votes { color: #62626c; font-size: 0.68rem; text-align: center; }
+.tallies { display: grid; gap: 0.55rem; margin-top: 1rem; }
+.tally-row { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr) 4rem; gap: 0.75rem; align-items: center; }
+.result-card { display: grid; width: 2.25rem; height: 2.8rem; place-items: center; color: #a1a1aa; border: 1px solid #29292f; background: #101014; font-size: 0.85rem; }
+.bar-track { height: 2px; overflow: hidden; background: #202026; }
+.bar-track i { display: block; height: 100%; background: #2563eb; box-shadow: 0 0 8px #2563eb; transition: width 500ms ease; }
+.bar-track i.neutral { background: #71717a; box-shadow: none; }
+.tally-count { color: #62626c; font-size: 0.58rem; text-align: right; }
+.vote-summary { grid-column: 1 / -1; color: #52525b; font-size: 0.62rem; text-align: center; }
+
+@media (max-width: 560px) {
+    .vote-results { grid-template-columns: 1fr; gap: 1.5rem; }
+    .average-vote strong { width: 5rem; height: 6.5rem; }
+}
+</style>

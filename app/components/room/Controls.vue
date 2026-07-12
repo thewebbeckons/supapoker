@@ -31,12 +31,17 @@ const settingsItems = computed(() => [
 </script>
 
 <template>
-    <div class="flex items-center self-center gap-2">
-        <UButton v-if="canEdit" label="New Story" icon="i-lucide-plus" color="primary" size="sm"
+    <div class="room-controls">
+        <UButton v-if="canEdit" label="New story" icon="i-lucide-plus" color="primary" variant="subtle" size="sm"
             @click="emit('new-story')" />
 
         <UDropdownMenu v-if="canEdit" :items="settingsItems" :content="{ align: 'end', side: 'bottom' }">
-            <UButton icon="i-lucide-settings" color="neutral" variant="ghost" size="sm" />
+            <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="sm" aria-label="Room settings" />
         </UDropdownMenu>
     </div>
 </template>
+
+<style scoped>
+.room-controls { display: flex; align-items: center; gap: 0.35rem; }
+.room-controls :deep(button) { border-radius: 0; }
+</style>

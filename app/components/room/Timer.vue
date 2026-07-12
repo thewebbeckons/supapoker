@@ -45,7 +45,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div class="flex items-center gap-1.5 text-primary-500 font-mono text-sm">
+    <div class="room-timer flex items-center gap-1.5 text-primary-500 font-mono text-sm">
         <UIcon name="i-lucide-clock" class="w-4 h-4" />
         <span>{{ timer }}</span>
     </div>
