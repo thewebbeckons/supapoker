@@ -314,30 +314,19 @@ watch(stories, (nextStories) => {
         </UModal>
     </div>
 
-    <div v-else class="min-h-screen">
+    <div v-else class="room-page">
         <ClientOnly>
             <RoomBirdBurst :burst-key="pokeBurstKey" />
         </ClientOnly>
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 overflow-hidden gap-6 p-6">
-            <!-- Main Content Area -->
-            <div
-                class="lg:col-span-3 flex flex-col h-full bg-white dark:bg-neutral-900 rounded-xl border border-neutral-200 dark:border-neutral-800 shadow-sm relative overflow-hidden"
-            >
-                <div class="p-6 pb-2 flex justify-between items-start">
+        <div class="room-shell">
+            <main class="room-main">
+                <header class="room-header">
                     <div>
-                        <h1
-                            class="text-2xl font-semibold text-neutral-700 dark:text-neutral-200"
-                        >
-                            {{ room?.name }}
-                        </h1>
-                        <p
-                            class="text-sm text-neutral-500 dark:text-neutral-400"
-                        >
-                            {{ room?.description }}
-                        </p>
+                        <p class="room-kicker">PLANNING ROOM · {{ roomId.slice(0, 8) }}</p>
+                        <h1>{{ room?.name }}</h1>
+                        <p>{{ room?.description || "Estimate together, then reveal as a team." }}</p>
                     </div>
-                    <!-- Room Actions/Edit -->
                     <RoomControls
                         :can-edit="canEdit"
                         @new-story="isNewStoryModalOpen = true"
@@ -345,27 +334,24 @@ watch(stories, (nextStories) => {
                         @delete-room="isDeleteModalOpen = true"
                         @poke-users="pokeUsers"
                     />
-                </div>
+                </header>
 
-                <div
-                    class="flex-1 flex flex-col justify-center items-center gap-8 overflow-y-auto p-6"
-                >
-                    <!-- Current Story Indicator -->
-                    <div
-                        class="text-center min-h-8 flex items-center justify-center gap-4"
-                    >
+                <section class="vote-stage">
+                    <div class="current-story">
                         <template v-if="activeStory">
-                            <h2
-                                class="text-xl font-semibold text-neutral-800 dark:text-neutral-100"
-                            >
-                                {{ activeStory.title }}
-                            </h2>
-                            <div v-if="canEdit" class="flex items-center gap-2">
+                            <span>CURRENT STORY</span>
+                            <h2>{{ activeStory.title }}</h2>
+                            <div class="story-state" :class="{ live: isVoting }">
+                                <i />
+                                {{ isVoting ? "Voting open" : isVoted ? "Votes revealed" : "Ready to vote" }}
+                                <RoomTimer v-if="isVoting" :story="activeStory" />
+                            </div>
+                            <div v-if="canEdit" class="vote-actions">
                                 <template v-if="pendingStoryActionType === 'startVote'">
                                     <UButton
                                         size="sm"
                                         color="primary"
-                                        variant="solid"
+                                        variant="subtle"
                                         icon="i-lucide-loader-circle"
                                         loading
                                         disabled
@@ -377,7 +363,7 @@ watch(stories, (nextStories) => {
                                     <UButton
                                         size="sm"
                                         color="error"
-                                        variant="solid"
+                                        variant="subtle"
                                         icon="i-lucide-loader-circle"
                                         loading
                                         disabled
@@ -389,7 +375,7 @@ watch(stories, (nextStories) => {
                                     <UButton
                                         size="sm"
                                         color="error"
-                                        variant="solid"
+                                        variant="subtle"
                                         icon="i-lucide-square"
                                         :disabled="isStoryActionPending"
                                         @click="stopVote"
@@ -401,7 +387,7 @@ watch(stories, (nextStories) => {
                                     <UButton
                                         size="sm"
                                         color="primary"
-                                        variant="solid"
+                                        variant="subtle"
                                         icon="i-lucide-rotate-ccw"
                                         :disabled="isStoryActionPending"
                                         @click="startVote"
@@ -433,15 +419,13 @@ watch(stories, (nextStories) => {
                                 </template>
                             </div>
                         </template>
-                        <span
-                            v-else
-                            class="text-lg font-medium text-neutral-400 dark:text-neutral-500"
-                        >
-                            No Active Story
-                        </span>
+                        <template v-else>
+                            <span>CURRENT STORY</span>
+                            <h2>No active story</h2>
+                            <p class="empty-story-copy">Choose a story below to prepare the next vote.</p>
+                        </template>
                     </div>
 
-                    <!-- Vote Results or Cards Grid -->
                     <RoomVoteResults
                         v-if="isVoted"
                         :votes="votes"
@@ -452,9 +436,8 @@ watch(stories, (nextStories) => {
                         :is-voting="isVoting"
                         @update:model-value="selectCard"
                     />
-                </div>
+                </section>
 
-                <!-- Stories Panel (Bottom) -->
                 <RoomStoriesPanel
                     :stories="stories"
                     :can-manage="canEdit"
@@ -463,9 +446,8 @@ watch(stories, (nextStories) => {
                     @delete="onDeleteStory"
                     @view-votes="onViewVotes"
                 />
-            </div>
+            </main>
 
-            <!-- Sidebar Grid -->
             <RoomSidebar
                 :players="players"
                 :active-story="activeStory"
@@ -473,6 +455,7 @@ watch(stories, (nextStories) => {
                 :votes="votes"
                 :room="room ?? null"
                 :connection-status="connectionStatus"
+                @poke-users="pokeUsers"
             />
         </div>
 
@@ -520,3 +503,86 @@ watch(stories, (nextStories) => {
         />
     </div>
 </template>
+
+<style scoped>
+.room-page {
+    min-height: calc(100dvh - 4rem);
+    padding-block: 1.5rem;
+}
+
+.room-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 17rem;
+    min-height: calc(100dvh - 8rem);
+    color: #d4d4d8;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    background: #0a0a0c;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.34);
+}
+
+.room-main {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+}
+
+.room-header {
+    display: flex;
+    min-height: 7rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 2rem;
+    padding: 1.4rem 1.75rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.room-kicker,
+.current-story > span,
+.story-state {
+    font-size: 0.64rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.room-kicker { color: #3b82f6; }
+.room-header h1 { margin-top: 0.35rem; color: #f4f4f5; font-size: 1.15rem; font-weight: 600; }
+.room-header > div > p:last-child { margin-top: 0.25rem; color: #686871; font-size: 0.75rem; }
+
+.vote-stage {
+    display: grid;
+    flex: 1;
+    align-content: center;
+    justify-items: center;
+    min-height: 32rem;
+    padding: 3.25rem 1.5rem;
+    background: radial-gradient(circle at 50% 42%, rgba(37, 99, 235, 0.075), transparent 42%);
+}
+
+.current-story { margin-bottom: 2.6rem; text-align: center; }
+.current-story > span { color: #60606a; }
+.current-story h2 { max-width: 48rem; margin-top: 0.65rem; color: #f4f4f5; font-size: clamp(1rem, 2vw, 1.35rem); font-weight: 500; }
+.story-state { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 0.8rem; color: #71717a; letter-spacing: 0.08em; }
+.story-state.live { color: #60a5fa; }
+.story-state > i { width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
+.story-state :deep(.room-timer) { margin-left: 0.35rem; }
+.vote-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 1.25rem; }
+.empty-story-copy { margin-top: 0.55rem; color: #5c5c65; font-size: 0.72rem; }
+
+@media (max-width: 960px) {
+    .room-shell { grid-template-columns: minmax(0, 1fr) 14rem; }
+}
+
+@media (max-width: 760px) {
+    .room-page { padding-block: 0; }
+    .room-shell { display: flex; min-height: auto; flex-direction: column; border-inline: 0; }
+    .room-header { min-height: 6rem; padding: 1rem; }
+    .vote-stage { min-height: 30rem; padding: 2.5rem 0.75rem; }
+}
+
+@media (max-width: 520px) {
+    .room-header { align-items: flex-start; gap: 1rem; }
+    .room-header h1 { font-size: 1rem; }
+    .room-header > div > p:last-child { max-width: 15rem; }
+    .current-story { margin-bottom: 2rem; }
+}
+</style>

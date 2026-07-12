@@ -30,36 +30,73 @@ function selectCard(value: string) {
 </script>
 
 <template>
-    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-w-4xl mx-auto">
-        <button v-for="card in CARDS" :key="card.value" @click="selectCard(card.value)" :disabled="!isVoting"
-            class="relative group flex flex-col items-center justify-center w-24 h-36 rounded-xl border-2 transition-all duration-200 bg-white dark:bg-neutral-800 shadow-sm"
-            :class="[
-                modelValue === card.value
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-950/30'
-                    : 'border-neutral-200 dark:border-neutral-700',
-                isVoting ? 'hover:-translate-y-1 hover:shadow-md cursor-pointer hover:border-primary-200 dark:hover:border-primary-800' : 'opacity-50 cursor-not-allowed'
-            ]">
-            <!-- Card Content - Big Center -->
-            <span class="text-4xl font-light"
-                :class="modelValue === card.value ? 'text-primary-600 dark:text-primary-400' : 'text-neutral-700 dark:text-neutral-200'">
-                <UIcon v-if="card.icon" :name="card.icon" class="w-8 h-8" />
-                <template v-else>{{ card.label }}</template>
-            </span>
+    <div class="poker-table" :class="{ disabled: !isVoting }" aria-label="Planning poker cards">
+        <div class="card-grid">
+            <button
+                v-for="card in CARDS"
+                :key="card.value"
+                type="button"
+                class="poker-card"
+                :class="{ selected: modelValue === card.value }"
+                :aria-pressed="modelValue === card.value"
+                :aria-label="`Vote ${card.label}`"
+                :disabled="!isVoting"
+                @click="selectCard(card.value)"
+            >
+                <span class="card-center">
+                    <UIcon v-if="card.icon" :name="card.icon" />
+                    <template v-else>{{ card.label }}</template>
+                </span>
+                <span class="card-corner card-corner-top">
+                    <UIcon v-if="card.icon" :name="card.icon" />
+                    <template v-else>{{ card.label }}</template>
+                </span>
+                <span class="card-corner card-corner-bottom">
+                    <UIcon v-if="card.icon" :name="card.icon" />
+                    <template v-else>{{ card.label }}</template>
+                </span>
+            </button>
+        </div>
 
-            <!-- Corner values -->
-            <span class="absolute top-2 left-2 text-xs font-medium text-neutral-400">
-                <template v-if="!card.icon">{{ card.label }}</template>
-                <UIcon v-else :name="card.icon" class="w-3 h-3" />
-            </span>
-            <span class="absolute bottom-2 right-2 text-xs font-medium text-neutral-400 transform rotate-180">
-                <template v-if="!card.icon">{{ card.label }}</template>
-                <UIcon v-else :name="card.icon" class="w-3 h-3" />
-            </span>
-
-            <!-- Active Indicator overlay for selected card -->
-            <div v-if="modelValue === card.value"
-                class="absolute inset-0 rounded-xl bg-primary-500/10 dark:bg-primary-400/10 pointer-events-none">
-            </div>
-        </button>
+        <p v-if="modelValue" class="selection-note">
+            <UIcon name="i-lucide-mouse-pointer-2" />
+            You voted <b>{{ CARDS.find(card => card.value === modelValue)?.label }}</b>
+        </p>
+        <p v-else class="selection-note">
+            <UIcon :name="isVoting ? 'i-lucide-mouse-pointer-2' : 'i-lucide-lock-keyhole'" />
+            {{ isVoting ? "Choose a card" : "Voting is not open" }}
+        </p>
     </div>
 </template>
+
+<style scoped>
+.poker-table { width: 100%; max-width: 58rem; }
+.card-grid { display: grid; grid-template-columns: repeat(13, minmax(42px, 1fr)); gap: clamp(0.35rem, 0.8vw, 0.75rem); }
+.poker-card { position: relative; display: flex; min-width: 0; height: 6.75rem; align-items: center; justify-content: center; color: #7a7a84; border: 1px solid #29292f; background: #101014; box-shadow: 0 10px 22px rgba(0, 0, 0, 0.12); transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease, transform 160ms ease, box-shadow 160ms ease; cursor: pointer; }
+.poker-card:hover:not(:disabled) { color: #d4d4d8; border-color: #4b4b55; transform: translateY(-4px); box-shadow: 0 14px 28px rgba(0, 0, 0, 0.28); }
+.poker-card:focus-visible { outline: 1px solid #60a5fa; outline-offset: 3px; }
+.poker-card:disabled { cursor: not-allowed; opacity: 0.42; }
+.poker-card.selected { z-index: 1; color: #93c5fd; border-color: #3b82f6; background: #0d1930; box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.16), 0 16px 30px rgba(0, 0, 0, 0.4); transform: translateY(-6px); }
+.card-center { font-size: clamp(1rem, 2.1vw, 1.7rem); font-weight: 450; }
+.card-center :deep(svg) { width: 1.35rem; height: 1.35rem; }
+.card-corner { position: absolute; font-size: 0.48rem; }
+.card-corner :deep(svg) { width: 0.55rem; height: 0.55rem; }
+.card-corner-top { top: 0.45rem; left: 0.5rem; }
+.card-corner-bottom { right: 0.5rem; bottom: 0.45rem; transform: rotate(180deg); }
+.selection-note { display: flex; min-height: 1rem; align-items: center; justify-content: center; gap: 0.45rem; margin-top: 1.7rem; color: #5f5f69; font-size: 0.65rem; }
+.selection-note b { color: #93c5fd; }
+
+@media (max-width: 1180px) {
+    .card-grid { grid-template-columns: repeat(7, minmax(45px, 1fr)); max-width: 34rem; margin-inline: auto; }
+    .poker-card { height: 5.75rem; }
+}
+
+@media (max-width: 520px) {
+    .card-grid { grid-template-columns: repeat(5, minmax(42px, 1fr)); max-width: 19rem; }
+    .poker-card { height: 4.75rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .poker-card { transition: none; }
+}
+</style>
