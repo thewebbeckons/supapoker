@@ -62,26 +62,10 @@
 				:style="landing ? { color: '#f4f4f5' } : undefined"
 			>
 				<img
-					v-if="landing"
 					src="/logo-pixel-dark.svg"
 					alt="SupaPoker Logo"
 					class="h-8 w-8"
 				/>
-				<ClientOnly v-else>
-					<UColorModeImage
-						light="/logo-pixel-light.svg"
-						dark="/logo-pixel-dark.svg"
-						alt="SupaPoker Logo"
-						class="h-8 w-8"
-					/>
-					<template #fallback>
-						<img
-							src="/logo-pixel-light.svg"
-							alt="SupaPoker Logo"
-							class="h-8 w-8"
-						/>
-					</template>
-				</ClientOnly>
 				SupaPoker
 			</NuxtLink>
 			<UBadge
