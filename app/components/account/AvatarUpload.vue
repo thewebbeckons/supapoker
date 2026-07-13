@@ -89,21 +89,26 @@ async function uploadAvatar(event: Event) {
 </script>
 
 <template>
-  <div
-    class="relative group"
-    :class="busy ? 'cursor-wait' : 'cursor-pointer'"
-    :aria-busy="busy"
-    @click="openFileInput"
-  >
-    <UAvatar :src="displayedAvatar || undefined" :alt="name" size="3xl" class="group-hover:opacity-75 transition-opacity" />
+  <div class="relative">
+    <button
+      type="button"
+      class="relative group block rounded-full border-0 bg-transparent p-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+      :class="busy ? 'cursor-wait' : 'cursor-pointer'"
+      :aria-label="busy ? 'Processing avatar' : 'Upload avatar'"
+      :aria-busy="busy"
+      :disabled="busy"
+      @click="openFileInput"
+    >
+      <UAvatar :src="displayedAvatar || undefined" :alt="name" size="3xl" class="group-hover:opacity-75 transition-opacity" />
 
-    <div v-if="!busy" class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-      <UIcon name="i-lucide-upload" class="w-6 h-6 text-white" />
-    </div>
+      <div v-if="!busy" class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+        <UIcon name="i-lucide-upload" class="w-6 h-6 text-white" />
+      </div>
 
-    <div v-if="busy" class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
-      <UIcon name="i-lucide-loader-2" class="w-6 h-6 text-white animate-spin" />
-    </div>
+      <div v-if="busy" class="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full">
+        <UIcon name="i-lucide-loader-2" class="w-6 h-6 text-white animate-spin" />
+      </div>
+    </button>
 
     <input ref="fileInput" type="file" class="hidden" accept="image/png,image/jpeg,image/gif,image/webp" :disabled="busy" @change="uploadAvatar" />
   </div>
