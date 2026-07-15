@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-    middleware: ["auth"],
+    middleware: ["registered-auth"],
 });
 
 const { user } = useCurrentUser()

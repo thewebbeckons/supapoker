@@ -8,7 +8,7 @@ interface RoomListItem {
 }
 
 definePageMeta({
-  middleware: ["auth"],
+  middleware: ["registered-auth"],
 });
 
 const { user } = useCurrentUser();

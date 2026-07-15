@@ -12,7 +12,7 @@ const extensionByMimeType: Record<string, string> = {
 };
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAppUser(event);
+  const user = await requireRegisteredAppUser(event);
   const contentLength = Number(getRequestHeader(event, "content-length") ?? 0);
   if (Number.isFinite(contentLength) && contentLength > MAX_AVATAR_REQUEST_BYTES) {
     throw createError({ statusCode: 413, message: "Avatar upload request is too large." });

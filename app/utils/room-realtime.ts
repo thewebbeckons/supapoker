@@ -59,7 +59,8 @@ function isPlayer(value: unknown): value is Player {
     && typeof value.name === "string"
     && typeof value.avatar === "string"
     && typeof value.isModerator === "boolean"
-    && typeof value.isOnline === "boolean";
+    && typeof value.isOnline === "boolean"
+    && typeof value.isAnonymous === "boolean";
 }
 
 function isVotesMap(value: unknown): value is VotesMap {

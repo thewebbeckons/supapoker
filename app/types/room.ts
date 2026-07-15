@@ -53,6 +53,7 @@ export interface Player {
     avatar: string
     isModerator: boolean
     isOnline: boolean
+    isAnonymous: boolean
 }
 
 export interface TransferCandidate {
@@ -60,6 +61,7 @@ export interface TransferCandidate {
     name: string
     avatar: string
     isOnline: boolean
+    isAnonymous: boolean
 }
 
 export interface ConnectedRoomUser {

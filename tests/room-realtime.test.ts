@@ -44,6 +44,7 @@ const players = [
     avatar: "/admin.png",
     isModerator: true,
     isOnline: true,
+    isAnonymous: false,
   },
   {
     id: "user-1",
@@ -51,6 +52,7 @@ const players = [
     avatar: "/user.png",
     isModerator: false,
     isOnline: true,
+    isAnonymous: false,
   },
 ];
 

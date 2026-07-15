@@ -22,6 +22,13 @@
       "when": 1782673844666,
       "tag": "0002_huge_ted_forrester",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1784064724112,
+      "tag": "0003_silly_havok",
+      "breakpoints": true
     }
   ]
 }

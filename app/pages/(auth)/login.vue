@@ -97,7 +97,7 @@ async function signInWithGithub() {
 }
 
 watch(user, async () => {
-  if (user.value && !hasRedirected.value) {
+  if (user.value && !user.value.isAnonymous && !hasRedirected.value) {
     hasRedirected.value = true;
     await navigateTo(getPostAuthPath());
   }
@@ -132,7 +132,7 @@ watch(user, async () => {
     />
 
     <div class="text-center text-sm text-neutral-400">
-      Don't have an account? <NuxtLink to="/signup" class="text-primary hover:underline">Sign up</NuxtLink>
+      Don't have an account? <NuxtLink :to="{ path: '/signup', query: { redirectTo: getQueryRedirectPath() || undefined } }" class="text-primary hover:underline">Sign up</NuxtLink>
     </div>
   </div>
 </template>

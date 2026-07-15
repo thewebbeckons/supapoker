@@ -6,8 +6,18 @@ definePageMeta({
   layout: "auth",
 });
 
+const route = useRoute();
 const toast = useToast();
 const submittedEmail = ref("");
+const { user } = useCurrentUser();
+
+function getPostAuthPath() {
+  const redirectTo = route.query.redirectTo;
+  if (typeof redirectTo !== "string" || !redirectTo.startsWith("/") || redirectTo.startsWith("//")) {
+    return "/rooms";
+  }
+  return redirectTo;
+}
 
 const schema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -18,7 +28,7 @@ const schema = z.object({
 type Schema = z.output<typeof schema>;
 
 const state = reactive<Schema>({
-  name: "",
+  name: user.value?.isAnonymous && user.value.name !== "Guest" ? user.value.name : "",
   email: "",
   password: "",
 });
@@ -32,7 +42,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     email: payload.data.email,
     password: payload.data.password,
     name: payload.data.name,
-    callbackURL: "/rooms",
+    callbackURL: getPostAuthPath(),
   });
 
   if (result.error) {
@@ -57,7 +67,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
 async function signInWithGithub() {
   await authClient.signIn.social({
     provider: "github",
-    callbackURL: "/rooms",
+    callbackURL: getPostAuthPath(),
   });
 }
 
@@ -85,7 +95,7 @@ onUnmounted(() => {
       </div>
 
       <div class="flex w-full flex-col gap-2">
-        <UButton label="Go to Login" icon="i-lucide-log-in" color="primary" block to="/login" />
+        <UButton label="Go to Login" icon="i-lucide-log-in" color="primary" block :to="{ path: '/login', query: { redirectTo: getPostAuthPath() } }" />
         <UButton label="Use a Different Email" icon="i-lucide-pencil" color="neutral" variant="ghost" block @click="submittedEmail = ''" />
       </div>
     </div>
@@ -126,7 +136,7 @@ onUnmounted(() => {
       <UButton label="Continue with GitHub" icon="i-lucide-github" color="neutral" variant="outline" block @click="signInWithGithub" />
 
       <div class="text-center text-sm text-neutral-400">
-        Already have an account? <NuxtLink to="/login" class="text-primary hover:underline">Login</NuxtLink>
+        Already have an account? <NuxtLink :to="{ path: '/login', query: { redirectTo: getPostAuthPath() } }" class="text-primary hover:underline">Login</NuxtLink>
       </div>
     </template>
   </div>

@@ -1,6 +1,11 @@
 import { createAuthClient } from "better-auth/vue";
+import { anonymousClient } from "better-auth/client/plugins";
 
-type AuthClient = ReturnType<typeof createAuthClient>;
+const authClientOptions = {
+  plugins: [anonymousClient()],
+};
+
+type AuthClient = ReturnType<typeof createAuthClient<typeof authClientOptions>>;
 
 let client: AuthClient | null = null;
 
@@ -15,6 +20,7 @@ function getAuthBaseUrl() {
 function getAuthClient() {
   client ??= createAuthClient({
     baseURL: getAuthBaseUrl(),
+    ...authClientOptions,
   });
 
   return client;

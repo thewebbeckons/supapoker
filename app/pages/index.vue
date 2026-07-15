@@ -4,10 +4,12 @@ definePageMeta({
     async function () {
       const { user, ready, refresh } = useCurrentUser()
       if (!ready.value) await refresh()
-      if (user.value) return navigateTo('/rooms')
+      if (user.value && !user.value.isAnonymous) return navigateTo('/rooms')
     }
   ]
 })
+
+const isGuestRoomModalOpen = ref(false)
 
 useSeoMeta({
   title: 'SupaPoker — Planning poker without the ceremony',
@@ -59,11 +61,11 @@ const features = [
 
         <div class="hero-actions reveal reveal-4">
           <UButton
-            to="/signup"
             size="xl"
             color="primary"
             trailing-icon="i-lucide-arrow-right"
             class="landing-primary-button"
+            @click="isGuestRoomModalOpen = true"
           >
             Start planning free
           </UButton>
@@ -115,15 +117,17 @@ const features = [
       <p>YOUR NEXT ESTIMATION SESSION</p>
       <h2 id="cta-title">Less setup. Better signal.</h2>
       <UButton
-        to="/signup"
         size="xl"
         color="primary"
         trailing-icon="i-lucide-arrow-right"
         class="landing-primary-button"
+        @click="isGuestRoomModalOpen = true"
       >
         Create your first room
       </UButton>
     </section>
+
+    <LandingGuestRoomModal v-model="isGuestRoomModalOpen" />
   </div>
 </template>
 
