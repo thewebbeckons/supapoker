@@ -1,4 +1,11 @@
 <script lang="ts" setup>
+import type { CardDeckId } from "~/utils/card-decks";
+import {
+  cardValuesValidationError,
+  DEFAULT_CARD_DECK_ID,
+  parseCustomCardValues,
+} from "~/utils/card-decks";
+
 interface RoomListItem {
   id: string;
   name: string;
@@ -18,6 +25,15 @@ const isCreateRoomModalOpen = ref(false);
 const isCreatingRoom = ref(false);
 const newRoomName = ref("");
 const newRoomDescription = ref("");
+const newRoomCardDeckId = ref<CardDeckId>(DEFAULT_CARD_DECK_ID);
+const newRoomCustomCardValues = ref("1, 2, 3, 5, 8, 13, ?, ☕");
+
+const parsedCustomCardValues = computed(() => parseCustomCardValues(newRoomCustomCardValues.value));
+const customCardValuesError = computed(() => cardValuesValidationError(parsedCustomCardValues.value));
+const canCreateRoom = computed(() => Boolean(
+  newRoomName.value.trim()
+  && (newRoomCardDeckId.value !== "custom" || !customCardValuesError.value),
+));
 
 const viewMode = useCookie<"card" | "list">("rooms-view-mode", {
   default: () => "card",
@@ -50,11 +66,13 @@ const filteredRooms = computed(() => {
 function openCreateRoomModal() {
   newRoomName.value = "";
   newRoomDescription.value = "";
+  newRoomCardDeckId.value = DEFAULT_CARD_DECK_ID;
+  newRoomCustomCardValues.value = "1, 2, 3, 5, 8, 13, ?, ☕";
   isCreateRoomModalOpen.value = true;
 }
 
 async function createRoom() {
-  if (isCreatingRoom.value || !newRoomName.value.trim() || !user.value) return;
+  if (isCreatingRoom.value || !canCreateRoom.value || !user.value) return;
 
   isCreatingRoom.value = true;
   try {
@@ -63,6 +81,8 @@ async function createRoom() {
       body: {
         name: newRoomName.value,
         description: newRoomDescription.value,
+        cardDeckId: newRoomCardDeckId.value,
+        ...(newRoomCardDeckId.value === "custom" ? { cardValues: parsedCustomCardValues.value } : {}),
       },
     });
 
@@ -162,7 +182,7 @@ async function createRoom() {
       </NuxtLink>
     </div>
 
-    <UModal v-model:open="isCreateRoomModalOpen" title="Create Room" description="Create a planning poker room." :ui="{ content: 'sm:max-w-md' }">
+    <UModal v-model:open="isCreateRoomModalOpen" title="Create Room" description="Name your room and choose how the team will estimate." :ui="{ content: 'sm:max-w-3xl' }">
       <template #body>
         <div class="flex flex-col gap-4">
           <UFormField label="Room Name" required>
@@ -171,9 +191,15 @@ async function createRoom() {
           <UFormField label="Description">
             <UTextarea v-model="newRoomDescription" placeholder="Optional description..." :rows="3" />
           </UFormField>
+          <UFormField label="Card style" required>
+            <RoomCardDeckPicker
+              v-model:deck-id="newRoomCardDeckId"
+              v-model:custom-values="newRoomCustomCardValues"
+            />
+          </UFormField>
           <div class="flex justify-end gap-2">
             <UButton label="Cancel" color="neutral" variant="ghost" @click="isCreateRoomModalOpen = false" />
-            <UButton label="Create" color="primary" :loading="isCreatingRoom" :disabled="isCreatingRoom || !newRoomName.trim()" @click="createRoom" />
+            <UButton label="Create" color="primary" :loading="isCreatingRoom" :disabled="isCreatingRoom || !canCreateRoom" @click="createRoom" />
           </div>
         </div>
       </template>

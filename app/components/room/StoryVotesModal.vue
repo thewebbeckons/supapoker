@@ -6,6 +6,7 @@ const props = defineProps<{
         room_id: string
         title: string
     } | null
+    cardValues: string[]
 }>()
 
 const emit = defineEmits<{
@@ -44,7 +45,7 @@ watch(() => props.story, async (story) => {
             <div v-if="isLoading" class="flex justify-center py-8">
                 <UProgress animation="carousel" />
             </div>
-            <RoomVoteResults v-else :votes="votes" />
+            <RoomVoteResults v-else :votes="votes" :cards="cardValues" />
         </template>
     </UModal>
 </template>
