@@ -1,16 +1,6 @@
 import { blob } from "hub:blob";
 import { db, schema } from "hub:db";
 
-const MAX_AVATAR_BYTES = 1024 * 1024;
-const MAX_AVATAR_REQUEST_BYTES = MAX_AVATAR_BYTES + 64 * 1024;
-const allowedMimeTypes = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
-const extensionByMimeType: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/gif": "gif",
-  "image/webp": "webp",
-};
-
 export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event);
   const contentLength = Number(getRequestHeader(event, "content-length") ?? 0);
@@ -25,17 +15,14 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, message: "Avatar file is required." });
   }
 
-  if (!allowedMimeTypes.has(file.type)) {
-    throw createError({ statusCode: 400, message: "Unsupported avatar image type." });
+  const validationError = validateProcessedAvatar(file.data, file.type);
+  if (validationError) {
+    throw createError({ statusCode: 400, message: validationError });
   }
 
-  if (file.data.byteLength > MAX_AVATAR_BYTES) {
-    throw createError({ statusCode: 400, message: "Avatar images must be 1MB or smaller." });
-  }
-
-  const pathname = `${user.id}/avatar.${extensionByMimeType[file.type]}`;
+  const pathname = `${user.id}/avatar.webp`;
   await blob.put(`avatars/${pathname}`, file.data, {
-    contentType: file.type,
+    contentType: "image/webp",
     access: "public",
   });
 
@@ -57,6 +44,20 @@ export default defineEventHandler(async (event) => {
         updatedAt: now,
       },
     });
+
+  try {
+    await blob.del([
+      `avatars/${user.id}/avatar.gif`,
+      `avatars/${user.id}/avatar.jpg`,
+      `avatars/${user.id}/avatar.png`,
+    ]);
+  } catch (error) {
+    console.error(JSON.stringify({
+      message: "unable to remove legacy avatar objects",
+      userId: user.id,
+      error: error instanceof Error ? error.message : String(error),
+    }));
+  }
 
   await syncUserRoomSessions(event, user.id);
 

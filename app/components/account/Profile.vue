@@ -86,7 +86,7 @@ function onAvatarUpdate(url: string | null) {
         <UInput v-model="profileState.email" variant="subtle" autocomplete="off" trailing-icon="i-lucide-at-sign" disabled />
       </UFormField>
       <USeparator />
-      <UFormField name="avatar" label="Avatar" description="JPG, GIF, WebP, or PNG. 1MB Max." class="flex max-sm:flex-col justify-between sm:items-center gap-4">
+      <UFormField name="avatar" label="Avatar" description="JPG, GIF, WebP, or PNG up to 10MB. Images are resized before upload." class="flex max-sm:flex-col justify-between sm:items-center gap-4">
         <AccountAvatarUpload :model-value="avatarUrl" @update:model-value="onAvatarUpdate" :name="profileState.name" />
       </UFormField>
       <div class="flex justify-end pt-4">
