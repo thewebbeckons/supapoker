@@ -7,11 +7,13 @@ definePageMeta({
 });
 
 const route = useRoute();
+const config = useRuntimeConfig();
 const toast = useToast();
 const loading = ref(false);
 const authForm = useTemplateRef<{ state: { password?: string } }>("authForm");
 const hasRedirected = ref(false);
 const { user, refresh } = useCurrentUser();
+const githubAuthEnabled = computed(() => String(config.public.githubAuthEnabled) !== "false");
 
 const fields: AuthFormField[] = [{
   name: "email",
@@ -123,6 +125,7 @@ watch(user, async () => {
     </UAuthForm>
 
     <UButton
+      v-if="githubAuthEnabled"
       label="Continue with GitHub"
       icon="i-lucide-github"
       color="neutral"

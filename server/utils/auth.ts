@@ -43,6 +43,7 @@ function getSiteUrl(event: H3Event) {
 
 export function createAuth(event: H3Event) {
   const config = useRuntimeConfig(event);
+  const githubAuthEnabled = String(config.public.githubAuthEnabled) !== "false";
 
   return betterAuth({
     baseURL: `${getSiteUrl(event)}/api/auth`,
@@ -86,12 +87,14 @@ export function createAuth(event: H3Event) {
         });
       },
     },
-    socialProviders: {
-      github: {
-        clientId: config.githubClientId,
-        clientSecret: config.githubClientSecret,
-      },
-    },
+    socialProviders: githubAuthEnabled
+      ? {
+          github: {
+            clientId: config.githubClientId,
+            clientSecret: config.githubClientSecret,
+          },
+        }
+      : {},
     trustedOrigins: [getSiteUrl(event)],
   });
 }

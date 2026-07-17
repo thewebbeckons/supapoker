@@ -7,7 +7,9 @@ definePageMeta({
 });
 
 const toast = useToast();
+const config = useRuntimeConfig();
 const submittedEmail = ref("");
+const githubAuthEnabled = computed(() => String(config.public.githubAuthEnabled) !== "false");
 
 const schema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -123,7 +125,7 @@ onUnmounted(() => {
         <UButton type="submit" block label="Sign Up" color="primary" />
       </UForm>
 
-      <UButton label="Continue with GitHub" icon="i-lucide-github" color="neutral" variant="outline" block @click="signInWithGithub" />
+      <UButton v-if="githubAuthEnabled" label="Continue with GitHub" icon="i-lucide-github" color="neutral" variant="outline" block @click="signInWithGithub" />
 
       <div class="text-center text-sm text-neutral-400">
         Already have an account? <NuxtLink to="/login" class="text-primary hover:underline">Login</NuxtLink>
