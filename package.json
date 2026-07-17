@@ -4,8 +4,10 @@
   "type": "module",
   "scripts": {
     "build": "nuxt build",
-    "cf:deploy": "pnpm build && wrangler --cwd .output deploy",
+    "cf:deploy": "pnpm build && pnpm run cf:migrate:remote && pnpm run cf:deploy:built",
+    "cf:deploy:built": "wrangler --cwd .output deploy",
     "cf:local": "pnpm build && CI=true wrangler d1 migrations apply DB --local --config .output/server/wrangler.json --persist-to .wrangler/state && wrangler dev --config .output/server/wrangler.json --persist-to .wrangler/state --env-file .env --var NUXT_PUBLIC_SITE_URL:http://localhost:8787",
+    "cf:migrate:remote": "wrangler d1 migrations apply DB --remote --config .output/server/wrangler.json",
     "cf:preview": "pnpm build && wrangler --cwd .output dev",
     "db:generate": "nuxt db generate",
     "db:migrate": "nuxt db migrate",

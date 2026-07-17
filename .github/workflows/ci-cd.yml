@@ -1,0 +1,376 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - closed
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+  PNPM_VERSION: "11.9.0"
+
+jobs:
+  checks:
+    name: Checks
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: checks-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
+    env:
+      BETTER_AUTH_SECRET: ci-only-secret-value-long-enough-for-builds
+      EMAIL_FROM: SupaPoker CI <noreply@example.com>
+      NUXT_HUB_BLOB_BUCKET_NAME: supapoker-ci-placeholder
+      NUXT_HUB_DATABASE_ID: 00000000-0000-0000-0000-000000000000
+      NUXT_PUBLIC_GITHUB_AUTH_ENABLED: "false"
+      NUXT_PUBLIC_SITE_URL: https://ci.invalid
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check generated migrations
+        shell: bash
+        run: |
+          pnpm run db:generate
+          if [[ -n "$(git status --porcelain -- server/db/migrations)" ]]; then
+            git status --short -- server/db/migrations
+            echo "Database migrations are not up to date. Run pnpm run db:generate and commit the result."
+            exit 1
+          fi
+
+      - name: Typecheck
+        run: pnpm run typecheck
+
+      - name: Test
+        run: pnpm run test
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Validate Worker bundle
+        run: pnpm exec wrangler --cwd .output deploy --dry-run
+
+  preview:
+    name: "Preview PR #${{ github.event.pull_request.number }}"
+    if: >-
+      always() &&
+      needs.checks.result == 'success' &&
+      github.event_name == 'pull_request' &&
+      github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    needs:
+      - checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    concurrency:
+      group: preview-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      BETTER_AUTH_SECRET: ${{ secrets.PREVIEW_BETTER_AUTH_SECRET }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM || 'SupaPoker Preview <noreply@supapoker.dev>' }}
+      NUXT_HUB_BLOB_BUCKET_NAME: ${{ vars.NUXT_HUB_PREVIEW_BLOB_BUCKET_NAME }}
+      NUXT_HUB_DATABASE_ID: 00000000-0000-0000-0000-000000000000
+      NUXT_PUBLIC_GITHUB_AUTH_ENABLED: "false"
+      NUXT_PUBLIC_SITE_URL: https://preview.invalid
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Provision preview resources
+        id: preview
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          WORKERS_SUBDOMAIN: ${{ vars.CLOUDFLARE_WORKERS_SUBDOMAIN }}
+        run: |
+          if [[ -z "$WORKERS_SUBDOMAIN" ]]; then
+            echo "CLOUDFLARE_WORKERS_SUBDOMAIN is not configured as a repository variable."
+            exit 1
+          fi
+
+          worker_name="supapoker-pr-${PR_NUMBER}"
+          database_name="$worker_name"
+          preview_url="https://${worker_name}.${WORKERS_SUBDOMAIN}.workers.dev"
+          database_id="$(pnpm exec wrangler d1 list --json | jq -r --arg name "$database_name" '.[] | select(.name == $name) | .uuid' | head -n 1)"
+
+          if [[ -z "$database_id" ]]; then
+            pnpm exec wrangler d1 create "$database_name" --location enam
+            database_id="$(pnpm exec wrangler d1 list --json | jq -r --arg name "$database_name" '.[] | select(.name == $name) | .uuid' | head -n 1)"
+          fi
+
+          if [[ -z "$database_id" ]]; then
+            echo "Unable to resolve the D1 database ID for $database_name."
+            exit 1
+          fi
+
+          {
+            echo "database_id=$database_id"
+            echo "database_name=$database_name"
+            echo "preview_url=$preview_url"
+            echo "worker_name=$worker_name"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build preview
+        env:
+          NUXT_HUB_DATABASE_ID: ${{ steps.preview.outputs.database_id }}
+          NUXT_PUBLIC_SITE_URL: ${{ steps.preview.outputs.preview_url }}
+        run: pnpm run build
+
+      - name: Verify preview bindings
+        shell: bash
+        env:
+          DATABASE_ID: ${{ steps.preview.outputs.database_id }}
+        run: |
+          jq -e --arg database_id "$DATABASE_ID" '.d1_databases[] | select(.binding == "DB" and .database_id == $database_id)' .output/server/wrangler.json
+
+      - name: Apply preview migrations
+        run: pnpm run cf:migrate:remote
+
+      - name: Prepare preview secrets
+        shell: bash
+        run: |
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync(`${process.env.RUNNER_TEMP}/preview-secrets.json`, JSON.stringify({ BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET }));'
+
+      - name: Deploy preview Worker
+        shell: bash
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.preview_url }}
+          WORKER_NAME: ${{ steps.preview.outputs.worker_name }}
+        run: |
+          pnpm exec wrangler --cwd .output deploy \
+            --name "$WORKER_NAME" \
+            --secrets-file "$RUNNER_TEMP/preview-secrets.json" \
+            --var "EMAIL_FROM:$EMAIL_FROM" \
+            --var "NUXT_PUBLIC_GITHUB_AUTH_ENABLED:false" \
+            --var "NUXT_PUBLIC_SITE_URL:$PREVIEW_URL"
+
+      - name: Smoke-test preview
+        env:
+          PREVIEW_URL: ${{ steps.preview.outputs.preview_url }}
+        run: curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 5 "$PREVIEW_URL/api/session"
+
+      - name: Publish preview link
+        uses: actions/github-script@v8
+        env:
+          COMMIT_SHA: ${{ github.event.pull_request.head.sha }}
+          PREVIEW_URL: ${{ steps.preview.outputs.preview_url }}
+        with:
+          script: |
+            const marker = '<!-- supapoker-preview -->'
+            const body = `${marker}\n### Cloudflare preview\n\n✅ [Open preview](${process.env.PREVIEW_URL})\n\nDeployed commit \`${process.env.COMMIT_SHA}\`. The preview uses isolated D1 and Durable Object state; GitHub sign-in is disabled.`
+            const params = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            }
+            const comments = await github.paginate(github.rest.issues.listComments, params)
+            const existing = comments.find(comment => comment.body?.includes(marker))
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              })
+            } else {
+              await github.rest.issues.createComment({ ...params, body })
+            }
+
+  preview-cleanup:
+    name: "Remove preview PR #${{ github.event.pull_request.number }}"
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    concurrency:
+      group: preview-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      BETTER_AUTH_SECRET: cleanup-only-secret-value-long-enough
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      NUXT_HUB_BLOB_BUCKET_NAME: cleanup-placeholder
+      NUXT_HUB_DATABASE_ID: 00000000-0000-0000-0000-000000000000
+      NUXT_PUBLIC_GITHUB_AUTH_ENABLED: "false"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Delete preview resources
+        shell: bash
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          resource_name="supapoker-pr-${PR_NUMBER}"
+
+          if pnpm exec wrangler deployments list --name "$resource_name" > /dev/null 2>&1; then
+            pnpm exec wrangler delete --name "$resource_name" --force
+          fi
+
+          database_id="$(pnpm exec wrangler d1 list --json | jq -r --arg name "$resource_name" '.[] | select(.name == $name) | .uuid' | head -n 1)"
+          if [[ -n "$database_id" ]]; then
+            pnpm exec wrangler d1 delete "$database_id" --skip-confirmation
+          fi
+
+      - name: Mark preview as removed
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const marker = '<!-- supapoker-preview -->'
+            const params = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            }
+            const comments = await github.paginate(github.rest.issues.listComments, params)
+            const existing = comments.find(comment => comment.body?.includes(marker))
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: `${marker}\n### Cloudflare preview\n\n🧹 Preview resources were removed when this pull request closed.`,
+              })
+            }
+
+  production:
+    name: Deploy production
+    if: >-
+      always() &&
+      needs.checks.result == 'success' &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs:
+      - checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      deployments: write
+    environment:
+      name: production
+      url: https://supapoker.dev
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    env:
+      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      EMAIL_FROM: ${{ vars.EMAIL_FROM || 'SupaPoker <noreply@supapoker.dev>' }}
+      GITHUB_CLIENT_ID: ${{ secrets.GITHUB_CLIENT_ID }}
+      GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
+      NUXT_HUB_BLOB_BUCKET_NAME: ${{ vars.NUXT_HUB_BLOB_BUCKET_NAME }}
+      NUXT_HUB_DATABASE_ID: ${{ vars.NUXT_HUB_DATABASE_ID }}
+      NUXT_PUBLIC_GITHUB_AUTH_ENABLED: "true"
+      NUXT_PUBLIC_SITE_URL: https://supapoker.dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build production
+        run: pnpm run build
+
+      - name: Apply production migrations
+        run: pnpm run cf:migrate:remote
+
+      - name: Prepare production secrets
+        shell: bash
+        run: |
+          node --input-type=module -e 'import { writeFileSync } from "node:fs"; writeFileSync(`${process.env.RUNNER_TEMP}/production-secrets.json`, JSON.stringify({ BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET, GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET }));'
+
+      - name: Deploy production Worker
+        run: |
+          pnpm exec wrangler --cwd .output deploy \
+            --secrets-file "$RUNNER_TEMP/production-secrets.json" \
+            --var "EMAIL_FROM:$EMAIL_FROM" \
+            --var "NUXT_PUBLIC_GITHUB_AUTH_ENABLED:true" \
+            --var "NUXT_PUBLIC_SITE_URL:$NUXT_PUBLIC_SITE_URL"
+
+      - name: Smoke-test production
+        run: curl --fail --silent --show-error --retry 5 --retry-all-errors --retry-delay 5 https://supapoker.dev/api/session

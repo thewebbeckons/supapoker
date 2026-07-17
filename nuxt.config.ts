@@ -11,6 +11,8 @@ function requireEnv(name: string): string {
   return value;
 }
 
+const githubAuthEnabled = process.env.NUXT_PUBLIC_GITHUB_AUTH_ENABLED !== "false";
+
 export default defineNuxtConfig({
   compatibilityDate: "2026-06-14",
   devtools: {
@@ -31,23 +33,24 @@ export default defineNuxtConfig({
     db: {
       dialect: "sqlite",
       connection: {
-        databaseId: "c1fc4e89-5177-47e8-b82b-2d1439d80425",
+        databaseId: requireEnv("NUXT_HUB_DATABASE_ID"),
       },
     },
     kv: false,
     blob: {
       driver: "cloudflare-r2",
       binding: "BLOB",
-      bucketName: "supapoker-avatars",
+      bucketName: requireEnv("NUXT_HUB_BLOB_BUCKET_NAME"),
     },
     cache: false,
   },
   runtimeConfig: {
     betterAuthSecret: requireEnv("BETTER_AUTH_SECRET"),
-    githubClientId: requireEnv("GITHUB_CLIENT_ID"),
-    githubClientSecret: requireEnv("GITHUB_CLIENT_SECRET"),
+    githubClientId: githubAuthEnabled ? requireEnv("GITHUB_CLIENT_ID") : "",
+    githubClientSecret: githubAuthEnabled ? requireEnv("GITHUB_CLIENT_SECRET") : "",
     emailFrom: process.env.EMAIL_FROM || "SupaPoker <noreply@example.com>",
     public: {
+      githubAuthEnabled,
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || "",
     },
   },

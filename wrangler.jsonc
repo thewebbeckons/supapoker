@@ -25,6 +25,7 @@
 	],
 	"vars": {
 		"NUXT_PUBLIC_SITE_URL": "https://supapoker.dev",
+		"NUXT_PUBLIC_GITHUB_AUTH_ENABLED": "true",
 		"EMAIL_FROM": "SupaPoker <noreply@supapoker.dev>",
 	},
 	"observability": {
