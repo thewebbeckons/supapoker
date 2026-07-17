@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { useClipboard } from "@vueuse/core";
 import type { Room, Story, TransferCandidate } from "~/types/room";
+import { DEFAULT_CARD_VALUES, getCardDeckName } from "~/utils/card-decks";
 
 definePageMeta({
     middleware: ["auth"],
@@ -356,7 +357,14 @@ watch(stories, (nextStories) => {
                     <div>
                         <p class="room-kicker">PLANNING ROOM · {{ roomId.slice(0, 8) }}</p>
                         <h1>{{ room?.name }}</h1>
-                        <p>{{ room?.description || "Estimate together, then reveal as a team." }}</p>
+                        <p class="room-description">{{ room?.description || "Estimate together, then reveal as a team." }}</p>
+                        <UBadge
+                            :label="`${getCardDeckName(room?.cardDeckId ?? 'modified-fibonacci')} · ${room?.cardValues.length ?? DEFAULT_CARD_VALUES.length} cards`"
+                            color="neutral"
+                            variant="subtle"
+                            size="sm"
+                            class="room-deck-badge"
+                        />
                     </div>
                     <RoomControls
                         :can-edit="canEdit"
@@ -470,9 +478,11 @@ watch(stories, (nextStories) => {
                     <RoomVoteResults
                         v-if="isVoted"
                         :votes="votes"
+                        :cards="room?.cardValues ?? DEFAULT_CARD_VALUES"
                     />
                     <RoomPokerTable
                         v-else
+                        :cards="room?.cardValues ?? DEFAULT_CARD_VALUES"
                         :model-value="selectedCard"
                         :is-voting="isVoting"
                         @update:model-value="selectCard"
@@ -541,6 +551,7 @@ watch(stories, (nextStories) => {
         <RoomStoryVotesModal
             v-model="isStoryVotesModalOpen"
             :story="selectedStory"
+            :card-values="room?.cardValues ?? DEFAULT_CARD_VALUES"
         />
     </div>
 </template>
@@ -587,7 +598,8 @@ watch(stories, (nextStories) => {
 
 .room-kicker { color: #60a5fa; }
 .room-header h1 { margin-top: 0.4rem; color: #fafafa; font-size: 1.35rem; font-weight: 600; }
-.room-header > div > p:last-child { margin-top: 0.3rem; color: #b4b4bd; font-size: 0.86rem; }
+.room-description { margin-top: 0.3rem; color: #b4b4bd; font-size: 0.86rem; }
+.room-deck-badge { margin-top: 0.7rem; }
 
 .vote-stage {
     position: relative;
