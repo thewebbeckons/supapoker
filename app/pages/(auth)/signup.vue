@@ -16,6 +16,9 @@ function getPostAuthPath() {
   if (typeof redirectTo !== "string" || !redirectTo.startsWith("/") || redirectTo.startsWith("//")) {
     return "/rooms";
   }
+  if (redirectTo === "/login" || redirectTo === "/confirm") {
+    return "/rooms";
+  }
   return redirectTo;
 }
 
@@ -28,10 +31,16 @@ const schema = z.object({
 type Schema = z.output<typeof schema>;
 
 const state = reactive<Schema>({
-  name: user.value?.isAnonymous && user.value.name !== "Guest" ? user.value.name : "",
+  name: "",
   email: "",
   password: "",
 });
+
+watch(user, (currentUser) => {
+  if (!state.name && currentUser?.isAnonymous && currentUser.name !== "Guest") {
+    state.name = currentUser.name;
+  }
+}, { immediate: true });
 
 const { passwordStrength, strengthScore, strengthColor } = usePasswordStrength(toRef(state, "password"));
 

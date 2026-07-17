@@ -50,12 +50,6 @@ export async function linkAnonymousAppData(
   const affectedRoomIds = new Set(participants.map(participant => participant.roomId));
   if (ownedRoom) affectedRoomIds.add(ownedRoom.roomId);
 
-  await Promise.all(
-    [...affectedRoomIds].map(roomId =>
-      getRoomSessionStub(event, roomId).transferUserIdentity(anonymousUserId, permanentUserId),
-    ),
-  );
-
   const statements: any[] = [];
 
   if (profile) {
@@ -111,6 +105,11 @@ export async function linkAnonymousAppData(
   );
 
   await db.batch(statements as [any, ...any[]]);
+  await Promise.all(
+    [...affectedRoomIds].map(roomId =>
+      getRoomSessionStub(event, roomId).transferUserIdentity(anonymousUserId, permanentUserId),
+    ),
+  );
   await Promise.all([...affectedRoomIds].map(roomId => syncRoomSession(event, roomId)));
 }
 

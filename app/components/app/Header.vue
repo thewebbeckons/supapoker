@@ -120,8 +120,8 @@
 					variant="ghost"
 					color="neutral"
 				/>
-				<UButton label="Login" :to="{ path: '/login', query: { redirectTo: guestUpgradeRedirect } }" variant="outline" color="neutral" />
-				<UButton label="Sign up" :to="{ path: '/signup', query: { redirectTo: guestUpgradeRedirect } }" color="primary" />
+				<UButton label="Login" :to="{ path: '/login', query: { redirectTo: guestUpgradeRedirect } }" variant="outline" color="neutral" :class="{ 'landing-login-button': landing }" />
+				<UButton label="Sign up" :to="{ path: '/signup', query: { redirectTo: guestUpgradeRedirect } }" color="primary" :class="{ 'landing-signup-button': landing }" />
 			</div>
 			<UDropdownMenu
 				v-else
@@ -189,8 +189,8 @@
 				>
 					<p class="px-2 text-sm text-neutral-400">Playing as {{ userName }}</p>
 					<UButton v-if="guestRoomId" label="Open room" :to="`/rooms/${guestRoomId}`" color="neutral" variant="ghost" block />
-					<UButton label="Login" :to="{ path: '/login', query: { redirectTo: guestUpgradeRedirect } }" color="neutral" variant="outline" block />
-					<UButton label="Sign up" :to="{ path: '/signup', query: { redirectTo: guestUpgradeRedirect } }" color="primary" block />
+					<UButton label="Login" :to="{ path: '/login', query: { redirectTo: guestUpgradeRedirect } }" color="neutral" variant="outline" :class="{ 'landing-login-button': landing }" block />
+					<UButton label="Sign up" :to="{ path: '/signup', query: { redirectTo: guestUpgradeRedirect } }" color="primary" :class="{ 'landing-signup-button': landing }" block />
 				</div>
 				<div
 					v-else

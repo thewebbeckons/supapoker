@@ -6,7 +6,11 @@ async function secretsMatch(received: string, expected: string) {
   ]);
   const receivedBytes = new Uint8Array(receivedHash);
   const expectedBytes = new Uint8Array(expectedHash);
-  return receivedBytes.every((byte, index) => byte === expectedBytes[index]);
+  let mismatch = 0;
+  for (let index = 0; index < receivedBytes.length; index += 1) {
+    mismatch |= receivedBytes[index]! ^ expectedBytes[index]!;
+  }
+  return mismatch === 0;
 }
 
 export default defineEventHandler(async (event) => {

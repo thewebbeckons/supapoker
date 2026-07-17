@@ -1,10 +1,46 @@
-<script setup lang="ts">
+<script lang="ts">
 interface TurnstileApi {
   render(element: HTMLElement, options: Record<string, unknown>): string;
   reset(widgetId: string): void;
   remove(widgetId: string): void;
 }
 
+let scriptLoadPromise: Promise<void> | null = null;
+
+function getTurnstileApi() {
+  return (window as typeof window & { turnstile?: TurnstileApi }).turnstile;
+}
+
+function loadTurnstileScript() {
+  if (getTurnstileApi()) return Promise.resolve();
+  if (scriptLoadPromise) return scriptLoadPromise;
+
+  document.querySelector<HTMLScriptElement>('script[data-supapoker-turnstile]')?.remove();
+
+  scriptLoadPromise = new Promise<void>((resolve, reject) => {
+    const script = document.createElement("script");
+    const fail = () => {
+      script.remove();
+      scriptLoadPromise = null;
+      reject(new Error("Turnstile failed to load"));
+    };
+    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.defer = true;
+    script.dataset.supapokerTurnstile = "true";
+    script.addEventListener("load", () => {
+      if (getTurnstileApi()) resolve();
+      else fail();
+    }, { once: true });
+    script.addEventListener("error", fail, { once: true });
+    document.head.appendChild(script);
+  });
+
+  return scriptLoadPromise;
+}
+</script>
+
+<script setup lang="ts">
 const props = defineProps<{ siteKey: string }>();
 const token = defineModel<string>({ default: "" });
 const emit = defineEmits<{ error: [] }>();
@@ -12,35 +48,13 @@ const container = useTemplateRef<HTMLElement>("container");
 let widgetId: string | null = null;
 
 function getApi() {
-  return (window as typeof window & { turnstile?: TurnstileApi }).turnstile;
-}
-
-function loadScript() {
-  const existing = document.querySelector<HTMLScriptElement>('script[data-supapoker-turnstile]');
-  if (existing) {
-    if (getApi()) return Promise.resolve();
-    return new Promise<void>((resolve, reject) => {
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("Turnstile failed to load")), { once: true });
-    });
-  }
-
-  return new Promise<void>((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-    script.async = true;
-    script.defer = true;
-    script.dataset.supapokerTurnstile = "true";
-    script.addEventListener("load", () => resolve(), { once: true });
-    script.addEventListener("error", () => reject(new Error("Turnstile failed to load")), { once: true });
-    document.head.appendChild(script);
-  });
+  return getTurnstileApi();
 }
 
 async function renderWidget() {
   if (!props.siteKey || !container.value || widgetId) return;
   try {
-    await loadScript();
+    await loadTurnstileScript();
     const api = getApi();
     if (!api || !container.value) throw new Error("Turnstile is unavailable");
     widgetId = api.render(container.value, {
