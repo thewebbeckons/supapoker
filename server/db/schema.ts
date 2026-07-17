@@ -87,6 +87,10 @@ export const rooms = sqliteTable("rooms", {
   name: text("name").notNull(),
   description: text("description"),
   adminUserId: text("admin_user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  cardDeckId: text("card_deck_id", {
+    enum: ["modified-fibonacci", "fibonacci", "t-shirt", "effort", "powers-of-two", "linear", "custom"],
+  }).notNull().default("modified-fibonacci"),
+  cardValues: text("card_values").notNull().default('["0","0.5","1","2","3","5","8","13","20","40","100","?","☕"]'),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });

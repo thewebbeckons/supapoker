@@ -8,28 +8,19 @@ import type {
   Story,
   VotesMap,
 } from "~/types/room";
-
 export const HIDDEN_VOTE = "__voted__";
 export const ROOM_SESSION_USER_HEADER = "x-supapoker-room-user";
 export const ROOM_DELETED_CLOSE_CODE = 4_004;
-export const PLANNING_POKER_VOTES = [
-  "0",
-  "0.5",
-  "1",
-  "2",
-  "3",
-  "5",
-  "8",
-  "13",
-  "20",
-  "40",
-  "100",
-  "?",
-  "☕",
-] as const;
-
 const STORY_STATUSES = new Set(["pending", "active", "voting", "voted", "completed"]);
-const PLANNING_POKER_VOTE_SET = new Set<string>(PLANNING_POKER_VOTES);
+const CARD_DECK_IDS = new Set([
+  "modified-fibonacci",
+  "fibonacci",
+  "t-shirt",
+  "effort",
+  "powers-of-two",
+  "linear",
+  "custom",
+]);
 const MAX_ENCODED_USER_LENGTH = 8_192;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -41,7 +32,12 @@ function isRoom(value: unknown): value is Room {
   return typeof value.id === "string"
     && typeof value.name === "string"
     && (typeof value.description === "string" || value.description === null)
-    && typeof value.adminUserId === "string";
+    && typeof value.adminUserId === "string"
+    && typeof value.cardDeckId === "string"
+    && CARD_DECK_IDS.has(value.cardDeckId)
+    && Array.isArray(value.cardValues)
+    && value.cardValues.length >= 2
+    && value.cardValues.every(card => typeof card === "string");
 }
 
 function isStory(value: unknown): value is Story {
@@ -75,10 +71,6 @@ export function isConnectedRoomUser(value: unknown): value is ConnectedRoomUser 
     && value.name.length > 0
     && typeof value.avatar === "string"
     && value.avatar.length > 0;
-}
-
-export function isPlanningPokerVote(value: unknown): value is typeof PLANNING_POKER_VOTES[number] {
-  return typeof value === "string" && PLANNING_POKER_VOTE_SET.has(value);
 }
 
 export function isRoomSocketBootstrap(value: unknown): value is RoomSocketBootstrap {

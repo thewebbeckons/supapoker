@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "1852d4e2-9bb7-4329-ae2f-70853a71f458",
-  "prevId": "c26e184e-691a-431c-9350-1152dfcc60ba",
+  "id": "6ffda94d-6ea3-4e41-af65-14c6f717b003",
+  "prevId": "1852d4e2-9bb7-4329-ae2f-70853a71f458",
   "tables": {
     "account": {
       "name": "account",
@@ -135,6 +135,72 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "guest_room_ownerships": {
+      "name": "guest_room_ownerships",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "room_id": {
+          "name": "room_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {
+        "guest_room_ownerships_room_id_idx": {
+          "name": "guest_room_ownerships_room_id_idx",
+          "columns": [
+            "room_id"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {
+        "guest_room_ownerships_user_id_user_id_fk": {
+          "name": "guest_room_ownerships_user_id_user_id_fk",
+          "tableFrom": "guest_room_ownerships",
+          "tableTo": "user",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "guest_room_ownerships_room_id_rooms_id_fk": {
+          "name": "guest_room_ownerships_room_id_rooms_id_fk",
+          "tableFrom": "guest_room_ownerships",
+          "tableTo": "rooms",
+          "columnsFrom": [
+            "room_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "profiles": {
       "name": "profiles",
       "columns": {
@@ -155,6 +221,13 @@
         "avatar_path": {
           "name": "avatar_path",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "last_active_at": {
+          "name": "last_active_at",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
@@ -644,6 +717,14 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "isAnonymous": {
+          "name": "isAnonymous",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false,
           "default": false
         },

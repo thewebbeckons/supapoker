@@ -2,6 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "hub:db";
 import type { CurrentUser } from "~/composables/useCurrentUser";
 import type { Player, Room, Story, StoryVoteSnapshot, VotesMap } from "~/types/room";
+import { DEFAULT_CARD_VALUES, isCardDeckId } from "~/utils/card-decks";
 import { requireRoomSessionNamespace } from "./cloudflare";
 
 function toIso(value: Date | string | number | null | undefined) {
@@ -11,11 +12,23 @@ function toIso(value: Date | string | number | null | undefined) {
 }
 
 export function mapRoom(row: typeof schema.rooms.$inferSelect): Room {
+  let cardValues: string[] = [...DEFAULT_CARD_VALUES];
+  try {
+    const parsed: unknown = JSON.parse(row.cardValues);
+    if (Array.isArray(parsed) && parsed.every(value => typeof value === "string")) {
+      cardValues = parsed;
+    }
+  } catch {
+    // Preserve the original deck for rows created before card styles existed.
+  }
+
   return {
     id: row.id,
     name: row.name,
     description: row.description,
     adminUserId: row.adminUserId,
+    cardDeckId: isCardDeckId(row.cardDeckId) ? row.cardDeckId : "modified-fibonacci",
+    cardValues,
     createdAt: toIso(row.createdAt),
     updatedAt: toIso(row.updatedAt),
     created_at: toIso(row.createdAt),
