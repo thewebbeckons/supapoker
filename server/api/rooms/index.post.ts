@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { db, schema } from "hub:db";
 import { z } from "zod";
 import {
@@ -50,10 +49,7 @@ export default defineEventHandler(async (event) => {
       });
     }
 
-    const profile = await db.query.profiles.findFirst({
-      where: eq(schema.profiles.userId, user.id),
-    });
-    const displayName = body.displayName || profile?.name;
+    const displayName = await resolveGuestDisplayName(user.id, body.displayName);
     if (!displayName) {
       throw createError({ statusCode: 400, message: "Display name is required." });
     }

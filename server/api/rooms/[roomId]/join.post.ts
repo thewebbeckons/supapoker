@@ -1,5 +1,4 @@
 import { db, schema } from "hub:db";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 
 const joinRoomSchema = z.object({
@@ -16,10 +15,7 @@ export default defineEventHandler(async (event) => {
   const now = new Date();
 
   if (isAnonymousAppUser(user)) {
-    const profile = await db.query.profiles.findFirst({
-      where: eq(schema.profiles.userId, user.id),
-    });
-    const name = body.name || profile?.name;
+    const name = await resolveGuestDisplayName(user.id, body.name);
     if (!name) throw createError({ statusCode: 400, message: "Display name is required." });
 
     await db.batch([

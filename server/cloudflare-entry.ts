@@ -111,18 +111,26 @@ const handler = {
       return;
     }
 
-    const origin = env.NUXT_PUBLIC_SITE_URL || "https://supapoker.dev";
-    const request = new Request(new URL("/api/internal/maintenance/guests", origin), {
-      method: "POST",
-      headers: {
-        "x-supapoker-maintenance-secret": env.MAINTENANCE_SECRET,
-      },
-    });
-    const response = await cloudflareHandler.fetch(request, env, context);
-    if (!response.ok) {
-      console.error("[guest-cleanup] Scheduled cleanup failed", {
-        status: response.status,
-        body: await response.text(),
+    try {
+      const origin = env.NUXT_PUBLIC_SITE_URL || "https://supapoker.dev";
+      const request = new Request(new URL("/api/internal/maintenance/guests", origin), {
+        method: "POST",
+        headers: {
+          "x-supapoker-maintenance-secret": env.MAINTENANCE_SECRET,
+        },
+      });
+      const response = await cloudflareHandler.fetch(request, env, context);
+      if (!response.ok) {
+        console.error("[guest-cleanup] Scheduled cleanup failed", {
+          status: response.status,
+          body: await response.text(),
+        });
+      }
+    } catch (error) {
+      console.error("[guest-cleanup] Scheduled cleanup threw", {
+        error: error instanceof Error
+          ? { name: error.name, message: error.message, stack: error.stack }
+          : String(error),
       });
     }
   },

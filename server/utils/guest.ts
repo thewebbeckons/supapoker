@@ -17,6 +17,15 @@ export async function getGuestOwnedRoomId(userId: string) {
   return ownership?.roomId ?? null;
 }
 
+export async function resolveGuestDisplayName(userId: string, requestedName?: string) {
+  if (requestedName) return requestedName;
+
+  const profile = await db.query.profiles.findFirst({
+    where: eq(schema.profiles.userId, userId),
+  });
+  return profile?.name ?? null;
+}
+
 export async function touchGuestActivity(user: { id: string; isAnonymous?: boolean | null }) {
   if (!isAnonymousAppUser(user)) return;
 
