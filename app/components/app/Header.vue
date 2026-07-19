@@ -58,7 +58,15 @@
 </script>
 
 <template>
-	<UHeader :class="{ 'landing-app-header': landing }">
+	<UHeader
+		:class="{ 'landing-app-header': landing }"
+		:ui="{
+			center: 'hidden sm:flex',
+			toggle: 'sm:hidden',
+			content: 'sm:hidden',
+			overlay: 'sm:hidden',
+		}"
+	>
 		<template #title>
 			<NuxtLink
 				to="/"
