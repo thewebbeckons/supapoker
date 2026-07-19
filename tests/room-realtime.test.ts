@@ -43,6 +43,15 @@ const story = {
   updated_at: "2026-07-11T12:00:00.000Z",
 };
 
+const guestPlayer = {
+  id: "guest-1",
+  name: "Guest Player",
+  avatar: "/guest.png",
+  isModerator: false,
+  isOnline: true,
+  isAnonymous: true,
+};
+
 const players = [
   {
     id: "admin-1",
@@ -50,6 +59,7 @@ const players = [
     avatar: "/admin.png",
     isModerator: true,
     isOnline: true,
+    isAnonymous: false,
   },
   {
     id: "user-1",
@@ -57,7 +67,9 @@ const players = [
     avatar: "/user.png",
     isModerator: false,
     isOnline: true,
+    isAnonymous: false,
   },
+  guestPlayer,
 ];
 
 test("connection user encoding safely round-trips unicode", () => {
@@ -134,6 +146,10 @@ test("the client parser accepts typed snapshots and rejects malformed frames", (
   if (snapshot?.type === "snapshot") {
     assert.equal(snapshot.revision, 7);
     assert.equal(snapshot.players.every(player => player.isOnline), true);
+    assert.deepEqual(
+      snapshot.players.find(player => player.id === guestPlayer.id),
+      guestPlayer,
+    );
   }
 
   assert.equal(parseRoomRealtimeMessage("not-json"), null);

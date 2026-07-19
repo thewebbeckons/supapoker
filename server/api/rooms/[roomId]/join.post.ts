@@ -1,4 +1,9 @@
 import { db, schema } from "hub:db";
+import { z } from "zod";
+
+const joinRoomSchema = z.object({
+  name: z.string().trim().min(2).max(80).optional(),
+});
 
 export default defineEventHandler(async (event) => {
   const user = await requireAppUser(event);
@@ -6,14 +11,31 @@ export default defineEventHandler(async (event) => {
   if (!roomId) throw createError({ statusCode: 400, message: "Room ID is required." });
 
   await requireRoom(roomId);
-  await db
-    .insert(schema.roomParticipants)
-    .values({
-      roomId,
-      userId: user.id,
-      joinedAt: new Date(),
-    })
-    .onConflictDoNothing();
+  const body = await readValidatedBody(event, joinRoomSchema.parse);
+  const now = new Date();
+
+  if (isAnonymousAppUser(user)) {
+    const name = await resolveGuestDisplayName(user.id, body.name);
+    if (!name) throw createError({ statusCode: 400, message: "Display name is required." });
+
+    await db.batch([
+      db.insert(schema.profiles).values({
+        userId: user.id,
+        name,
+        lastActiveAt: now,
+        createdAt: now,
+        updatedAt: now,
+      }).onConflictDoUpdate({
+        target: schema.profiles.userId,
+        set: { name, lastActiveAt: now, updatedAt: now },
+      }),
+      db.insert(schema.roomParticipants).values({ roomId, userId: user.id, joinedAt: now }).onConflictDoNothing(),
+    ]);
+  } else {
+    await db.insert(schema.roomParticipants)
+      .values({ roomId, userId: user.id, joinedAt: now })
+      .onConflictDoNothing();
+  }
 
   await syncRoomSession(event, roomId);
   return { ok: true };

@@ -3,14 +3,10 @@ import { useClipboard } from "@vueuse/core";
 import type { Room, Story, TransferCandidate } from "~/types/room";
 import { DEFAULT_CARD_VALUES, getCardDeckName } from "~/utils/card-decks";
 
-definePageMeta({
-    middleware: ["auth"],
-});
-
 const route = useRoute();
 
 const roomId = computed(() => String(route.params.id));
-const { user } = useCurrentUser();
+const { user, refresh: refreshCurrentUser } = useCurrentUser();
 const toast = useToast();
 const { copy } = useClipboard();
 
@@ -24,28 +20,24 @@ const isStoryVotesModalOpen = ref(false);
 const selectedStory = ref<Story | null>(null);
 const isJoinModalOpen = ref(false);
 const isJoiningRoom = ref(false);
+const joinDisplayName = ref("");
 const pokeBurstKey = ref(0);
 
-function getInviteQueryValue(
-    key: "roomName" | "roomDescription",
-): string {
-    const value = route.query[key];
-
-    if (typeof value === "string") return value;
-    if (Array.isArray(value) && typeof value[0] === "string") return value[0];
-    return "";
-}
-
-const inviteRoomName = computed(() => getInviteQueryValue("roomName"));
-const inviteRoomDescription = computed(() =>
-    getInviteQueryValue("roomDescription"),
+const {
+    data: inviteRoom,
+    status: inviteStatus,
+    error: inviteError,
+} = await useAsyncData(
+    `room-invite-${roomId.value}`,
+    () => $fetch<{ id: string; name: string; description: string | null }>(`/api/rooms/${roomId.value}/invite`),
+    { watch: [roomId] },
 );
 
 const {
     data: roomAccess,
     status: roomStatus,
     error: roomError,
-    refresh,
+    refresh: refreshAccess,
 } = await useAsyncData(
     `room-access-${roomId.value}`,
     async () => {
@@ -59,6 +51,7 @@ const {
 
 const initialRoom = computed(() => roomAccess.value?.room ?? null);
 const hasRoomLoadFailed = computed(() => {
+    if (inviteError.value) return true;
     if (!user.value || roomStatus.value === "idle" || roomStatus.value === "pending") return false;
 
     return Boolean(roomError.value) || !roomAccess.value || !initialRoom.value;
@@ -66,28 +59,41 @@ const hasRoomLoadFailed = computed(() => {
 const hasJoinedRoom = computed(() => Boolean(initialRoom.value && roomAccess.value?.isParticipant));
 
 watch(
-    [roomStatus, roomAccess, hasRoomLoadFailed, user],
-    ([status, access, loadFailed, currentUser]) => {
-        if (!currentUser || status === "idle" || status === "pending") return;
+    [inviteStatus, roomStatus, roomAccess, hasRoomLoadFailed, user],
+    ([publicStatus, accessStatus, access, loadFailed, currentUser]) => {
+        if (publicStatus === "idle" || publicStatus === "pending") return;
+        if (currentUser && (accessStatus === "idle" || accessStatus === "pending")) return;
 
-        if (loadFailed || !access) {
+        if (loadFailed || (currentUser && !access)) {
             isJoinModalOpen.value = false;
             return;
         }
 
-        isJoinModalOpen.value = !access.isParticipant;
+        isJoinModalOpen.value = !access?.isParticipant;
+        if (currentUser?.isAnonymous && currentUser.name !== "Guest" && !joinDisplayName.value) {
+            joinDisplayName.value = currentUser.name;
+        }
     },
     { immediate: true },
 );
 
 async function joinRoom() {
-    if (!user.value || isJoiningRoom.value) return;
+    if (!canJoinRoom.value) return;
 
     isJoiningRoom.value = true;
 
     try {
-        await $fetch(`/api/rooms/${roomId.value}/join`, { method: "POST" });
-        await refresh();
+        if (!user.value) {
+            const result = await authClient.signIn.anonymous();
+            if (result.error) throw new Error(result.error.message || "Unable to start a guest session.");
+            await refreshCurrentUser();
+        }
+
+        await $fetch(`/api/rooms/${roomId.value}/join`, {
+            method: "POST",
+            body: user.value?.isAnonymous ? { name: joinDisplayName.value } : {},
+        });
+        await Promise.all([refreshCurrentUser(), refreshAccess()]);
         isJoinModalOpen.value = false;
     } catch (error: any) {
         toast.add({
@@ -101,26 +107,30 @@ async function joinRoom() {
 }
 
 const joinModalTitle = computed(() => {
-    if (inviteRoomName.value) return inviteRoomName.value;
+    if (inviteRoom.value?.name) return inviteRoom.value.name;
     if (room.value?.name) return room.value.name;
     return "Join this room";
 });
 
 const joinModalDescription = computed(() => {
-    if (inviteRoomDescription.value) return inviteRoomDescription.value;
+    if (inviteRoom.value?.description) return inviteRoom.value.description;
     if (room.value?.description) return room.value.description;
     return "You've been invited to collaborate in this planning poker room.";
 });
 
 const isRoomLoading = computed(() => {
-    if (!user.value) return true;
-    return roomStatus.value === "idle" || roomStatus.value === "pending";
+    if (inviteStatus.value === "idle" || inviteStatus.value === "pending") return true;
+    return Boolean(user.value && (roomStatus.value === "idle" || roomStatus.value === "pending"));
 });
 
 const canJoinRoom = computed(() => {
     if (isJoiningRoom.value) return false;
-    return Boolean(user.value);
+    if (!user.value || user.value.isAnonymous) return joinDisplayName.value.trim().length >= 2;
+    return true;
 });
+
+const notNowPath = computed(() => user.value && !user.value.isAnonymous ? "/rooms" : "/");
+const authRedirect = computed(() => route.fullPath);
 
 const showRoomError = computed(() => {
     return hasRoomLoadFailed.value;
@@ -193,12 +203,13 @@ watch(lastPokeId, (value) => {
 
 const transferCandidates = computed<TransferCandidate[]>(() =>
     players.value
-        .filter((player) => player.id !== currentRoomCreatorId.value)
+        .filter((player) => player.id !== currentRoomCreatorId.value && !player.isAnonymous)
         .map((player) => ({
             id: player.id,
             name: player.name,
             avatar: player.avatar,
             isOnline: player.isOnline,
+            isAnonymous: player.isAnonymous,
         })),
 );
 
@@ -236,19 +247,11 @@ function onStoryDeleteSuccess() {
 }
 
 async function onRoomEditSuccess() {
-    await Promise.all([refresh(), realtime.refresh()]);
+    await Promise.all([refreshAccess(), realtime.refresh()]);
 }
 
 function copyRoomUrl(): void {
-    const inviteUrl = new URL(window.location.href);
-
-    if (room.value?.name) {
-        inviteUrl.searchParams.set("roomName", room.value.name);
-    }
-
-    if (room.value?.description) {
-        inviteUrl.searchParams.set("roomDescription", room.value.description);
-    }
+    const inviteUrl = new URL(`/rooms/${roomId.value}`, window.location.origin);
 
     copy(inviteUrl.toString());
     toast.add({
@@ -290,7 +293,7 @@ watch(stories, (nextStories) => {
         <h1 class="text-2xl font-bold text-error-500">Error</h1>
         <p class="text-neutral-500">Room not found or could not be loaded.</p>
         <UButton
-            to="/rooms"
+            :to="notNowPath"
             color="neutral"
             variant="ghost"
             class="mt-4"
@@ -326,9 +329,32 @@ watch(stories, (nextStories) => {
                         </p>
                     </div>
 
+                    <UFormField
+                        v-if="!user || user.isAnonymous"
+                        label="Your name"
+                        required
+                    >
+                        <UInput
+                            v-model="joinDisplayName"
+                            autofocus
+                            maxlength="80"
+                            placeholder="How teammates will see you"
+                            icon="i-lucide-user"
+                            class="w-full"
+                            @keyup.enter="joinRoom"
+                        />
+                    </UFormField>
+
+                    <p v-if="!user || user.isAnonymous" class="text-xs text-neutral-500">
+                        Prefer a permanent profile?
+                        <NuxtLink :to="{ path: '/login', query: { redirectTo: authRedirect } }" class="text-neutral-300 hover:text-white">Log in</NuxtLink>
+                        or
+                        <NuxtLink :to="{ path: '/signup', query: { redirectTo: authRedirect } }" class="text-neutral-300 hover:text-white">sign up</NuxtLink>.
+                    </p>
+
                     <div class="flex justify-end gap-2">
                         <UButton
-                            to="/rooms"
+                            :to="notNowPath"
                             color="neutral"
                             variant="ghost"
                             label="Not now"

@@ -259,6 +259,31 @@ export class RoomSession extends DurableObject<Env> {
     return { ok: true };
   }
 
+  async transferUserIdentity(fromUserId: string, toUserId: string): Promise<void> {
+    this.assertActive();
+    if (fromUserId === toUserId) return;
+
+    for (const table of ["votes", "revealed_votes"] as const) {
+      this.ctx.storage.sql.exec(
+        `INSERT OR IGNORE INTO ${table} (story_id, user_id, vote_value)
+         SELECT story_id, ?, vote_value FROM ${table} WHERE user_id = ?`,
+        toUserId,
+        fromUserId,
+      );
+      this.ctx.storage.sql.exec(`DELETE FROM ${table} WHERE user_id = ?`, fromUserId);
+    }
+
+    for (const socket of this.connectedSockets()) {
+      const user = this.connectionUser(socket);
+      if (user?.id === fromUserId) {
+        socket.serializeAttachment({ ...user, id: toUserId });
+      }
+    }
+
+    this.broadcastSnapshot();
+    this.broadcastPresence();
+  }
+
   async beginDelete(): Promise<void> {
     const deletionState = this.readMetaValue(DELETED_KEY);
     if (!deletionState) {

@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { anonymous } from "better-auth/plugins";
 import { toWebRequest, type H3Event } from "h3";
 import { db } from "hub:db";
 import * as schema from "../db/schema";
@@ -92,6 +93,18 @@ export function createAuth(event: H3Event) {
         clientSecret: config.githubClientSecret,
       },
     },
+    plugins: [
+      anonymous({
+        generateName: () => "Guest",
+        onLinkAccount: async ({ anonymousUser, newUser }) => {
+          await linkAnonymousAppData(
+            event,
+            anonymousUser.user.id,
+            newUser.user.id,
+          );
+        },
+      }),
+    ],
     trustedOrigins: [getSiteUrl(event)],
   });
 }
@@ -111,12 +124,28 @@ export async function requireAppUser(event: H3Event) {
     });
   }
 
-  await ensureProfileForUser({
-    id: session.user.id,
-    email: session.user.email,
-    name: session.user.name || session.user.email,
-    image: session.user.image,
-  });
+  if (isAnonymousAppUser(session.user)) {
+    await touchGuestActivity(session.user);
+  } else {
+    await ensureProfileForUser({
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name || session.user.email,
+      image: session.user.image,
+    });
+  }
 
   return session.user;
+}
+
+export async function requireRegisteredAppUser(event: H3Event) {
+  const user = await requireAppUser(event);
+  if (isAnonymousAppUser(user)) {
+    throw createError({
+      statusCode: 403,
+      message: "Create an account to access this feature.",
+      data: { code: "ACCOUNT_REQUIRED" },
+    });
+  }
+  return user;
 }

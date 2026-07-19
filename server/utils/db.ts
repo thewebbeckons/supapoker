@@ -166,12 +166,16 @@ export async function listRoomPlayers(roomId: string, adminUserId: string): Prom
     ...participants.map(participant => participant.userId),
   ]));
 
-  const profiles = await db
-    .select()
-    .from(schema.profiles)
-    .where(inArray(schema.profiles.userId, userIds));
+  const [profiles, users] = await Promise.all([
+    db.select().from(schema.profiles).where(inArray(schema.profiles.userId, userIds)),
+    db
+      .select({ id: schema.user.id, isAnonymous: schema.user.isAnonymous })
+      .from(schema.user)
+      .where(inArray(schema.user.id, userIds)),
+  ]);
 
   const profileMap = new Map(profiles.map(profile => [profile.userId, profile]));
+  const anonymousMap = new Map(users.map(user => [user.id, user.isAnonymous === true]));
 
   return userIds.map((userId) => {
     const profile = profileMap.get(userId);
@@ -181,6 +185,7 @@ export async function listRoomPlayers(roomId: string, adminUserId: string): Prom
       avatar: avatarUrlFromPath(profile?.avatarPath, profile?.updatedAt) ?? `https://api.dicebear.com/7.x/avataaars/svg?seed=${userId}`,
       isModerator: userId === adminUserId,
       isOnline: false,
+      isAnonymous: anonymousMap.get(userId) ?? false,
     };
   });
 }
