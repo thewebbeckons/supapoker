@@ -10,6 +10,8 @@ import { RoomSession } from "./durable-objects/room-session";
 
 interface CloudflareEnv extends AppEnv {
   ROOM_SESSION: DurableObjectNamespace<RoomSession>;
+  MAINTENANCE_SECRET?: string;
+  NUXT_PUBLIC_SITE_URL?: string;
 }
 
 const ROOM_SOCKET_PATH = /^\/api\/rooms\/([^/]+)\/socket\/?$/;
@@ -97,6 +99,39 @@ const handler = {
         error: error instanceof Error ? error.message : String(error),
       }));
       return new Response("Unable to connect to room realtime.", { status: 500 });
+    }
+  },
+  async scheduled(
+    _controller: ScheduledController,
+    env: CloudflareEnv,
+    context: ExecutionContext,
+  ): Promise<void> {
+    if (!env.MAINTENANCE_SECRET) {
+      console.error("[guest-cleanup] MAINTENANCE_SECRET is not configured");
+      return;
+    }
+
+    try {
+      const origin = env.NUXT_PUBLIC_SITE_URL || "https://supapoker.dev";
+      const request = new Request(new URL("/api/internal/maintenance/guests", origin), {
+        method: "POST",
+        headers: {
+          "x-supapoker-maintenance-secret": env.MAINTENANCE_SECRET,
+        },
+      });
+      const response = await cloudflareHandler.fetch(request, env, context);
+      if (!response.ok) {
+        console.error("[guest-cleanup] Scheduled cleanup failed", {
+          status: response.status,
+          body: await response.text(),
+        });
+      }
+    } catch (error) {
+      console.error("[guest-cleanup] Scheduled cleanup threw", {
+        error: error instanceof Error
+          ? { name: error.name, message: error.message, stack: error.stack }
+          : String(error),
+      });
     }
   },
 };

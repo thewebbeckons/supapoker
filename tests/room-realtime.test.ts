@@ -5,16 +5,22 @@ import {
   encodeRoomConnectionUser,
   HIDDEN_VOTE,
   isRoomSocketBootstrap,
-  isPlanningPokerVote,
   parseRoomRealtimeMessage,
   votesForViewer,
 } from "../app/utils/room-realtime.ts";
+import {
+  cardValuesValidationError,
+  isCardDeckVote,
+  parseCustomCardValues,
+} from "../app/utils/card-decks.ts";
 
 const room = {
   id: "room-1",
   name: "Realtime room",
   description: null,
   adminUserId: "admin-1",
+  cardDeckId: "modified-fibonacci" as const,
+  cardValues: ["0", "0.5", "1", "2", "3", "5", "8", "13", "20", "40", "100", "?", "☕"],
   createdAt: "2026-07-11T12:00:00.000Z",
   updatedAt: "2026-07-11T12:00:00.000Z",
   created_at: "2026-07-11T12:00:00.000Z",
@@ -37,6 +43,15 @@ const story = {
   updated_at: "2026-07-11T12:00:00.000Z",
 };
 
+const guestPlayer = {
+  id: "guest-1",
+  name: "Guest Player",
+  avatar: "/guest.png",
+  isModerator: false,
+  isOnline: true,
+  isAnonymous: true,
+};
+
 const players = [
   {
     id: "admin-1",
@@ -44,6 +59,7 @@ const players = [
     avatar: "/admin.png",
     isModerator: true,
     isOnline: true,
+    isAnonymous: false,
   },
   {
     id: "user-1",
@@ -51,7 +67,9 @@ const players = [
     avatar: "/user.png",
     isModerator: false,
     isOnline: true,
+    isAnonymous: false,
   },
+  guestPlayer,
 ];
 
 test("connection user encoding safely round-trips unicode", () => {
@@ -81,10 +99,23 @@ test("hidden votes reveal only the current viewer's card", () => {
 });
 
 test("only cards from the planning poker deck are accepted", () => {
-  assert.equal(isPlanningPokerVote("0.5"), true);
-  assert.equal(isPlanningPokerVote("☕"), true);
-  assert.equal(isPlanningPokerVote("999"), false);
-  assert.equal(isPlanningPokerVote(8), false);
+  assert.equal(isCardDeckVote("0.5", room.cardValues), true);
+  assert.equal(isCardDeckVote("☕", room.cardValues), true);
+  assert.equal(isCardDeckVote("999", room.cardValues), false);
+  assert.equal(isCardDeckVote(8, room.cardValues), false);
+  assert.equal(isCardDeckVote("XL", ["S", "M", "L", "XL"]), true);
+});
+
+test("custom decks are parsed and reject ambiguous values", () => {
+  assert.deepEqual(parseCustomCardValues("Tiny, Small\nMedium, Large"), [
+    "Tiny",
+    "Small",
+    "Medium",
+    "Large",
+  ]);
+  assert.equal(cardValuesValidationError(["S", "M", "L"]), null);
+  assert.match(cardValuesValidationError(["S", "S"]) ?? "", /unique/i);
+  assert.match(cardValuesValidationError(["S", "__voted__"]) ?? "", /reserved/i);
 });
 
 test("the socket bootstrap validates the complete room state", () => {
@@ -115,6 +146,10 @@ test("the client parser accepts typed snapshots and rejects malformed frames", (
   if (snapshot?.type === "snapshot") {
     assert.equal(snapshot.revision, 7);
     assert.equal(snapshot.players.every(player => player.isOnline), true);
+    assert.deepEqual(
+      snapshot.players.find(player => player.id === guestPlayer.id),
+      guestPlayer,
+    );
   }
 
   assert.equal(parseRoomRealtimeMessage("not-json"), null);

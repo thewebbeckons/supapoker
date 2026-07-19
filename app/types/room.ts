@@ -1,3 +1,5 @@
+import type { CardDeckId } from "~/utils/card-decks"
+
 export type StoryStatus = 'pending' | 'active' | 'voting' | 'voted' | 'completed'
 
 export type VotesMap = Record<string, string>
@@ -7,6 +9,8 @@ export interface Room {
     name: string
     description: string | null
     adminUserId: string
+    cardDeckId: CardDeckId
+    cardValues: string[]
     createdAt: string
     updatedAt: string
     created_at: string
@@ -53,6 +57,7 @@ export interface Player {
     avatar: string
     isModerator: boolean
     isOnline: boolean
+    isAnonymous: boolean
 }
 
 export interface TransferCandidate {
@@ -60,6 +65,7 @@ export interface TransferCandidate {
     name: string
     avatar: string
     isOnline: boolean
+    isAnonymous: boolean
 }
 
 export interface ConnectedRoomUser {

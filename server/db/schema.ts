@@ -7,6 +7,7 @@ export const user = sqliteTable(
     name: text("name").notNull(),
     email: text("email").notNull(),
     emailVerified: integer("emailVerified", { mode: "boolean" }).notNull().default(false),
+    isAnonymous: integer("isAnonymous", { mode: "boolean" }).default(false),
     image: text("image"),
     createdAt: integer("createdAt", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
     updatedAt: integer("updatedAt", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
@@ -76,6 +77,7 @@ export const profiles = sqliteTable("profiles", {
   userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   avatarPath: text("avatar_path"),
+  lastActiveAt: integer("last_active_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
@@ -85,6 +87,10 @@ export const rooms = sqliteTable("rooms", {
   name: text("name").notNull(),
   description: text("description"),
   adminUserId: text("admin_user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  cardDeckId: text("card_deck_id", {
+    enum: ["modified-fibonacci", "fibonacci", "t-shirt", "effort", "powers-of-two", "linear", "custom"],
+  }).notNull().default("modified-fibonacci"),
+  cardValues: text("card_values").notNull().default('["0","0.5","1","2","3","5","8","13","20","40","100","?","☕"]'),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
 });
@@ -98,6 +104,18 @@ export const roomParticipants = sqliteTable(
   },
   table => ({
     pk: primaryKey({ columns: [table.roomId, table.userId] }),
+  }),
+);
+
+export const guestRoomOwnerships = sqliteTable(
+  "guest_room_ownerships",
+  {
+    userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
+    roomId: text("room_id").notNull().references(() => rooms.id, { onDelete: "cascade" }),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+  },
+  table => ({
+    roomIdIdx: uniqueIndex("guest_room_ownerships_room_id_idx").on(table.roomId),
   }),
 );
 

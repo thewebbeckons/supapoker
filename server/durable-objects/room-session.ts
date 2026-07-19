@@ -10,12 +10,12 @@ import type {
 import {
   decodeRoomConnectionUser,
   isConnectedRoomUser,
-  isPlanningPokerVote,
   isRoomRealtimeState,
   ROOM_DELETED_CLOSE_CODE,
   ROOM_SESSION_USER_HEADER,
   votesForViewer,
 } from "~/utils/room-realtime";
+import { DEFAULT_CARD_VALUES, isCardDeckVote } from "~/utils/card-decks";
 
 interface Env {}
 
@@ -57,6 +57,7 @@ function numericVote(value: string) {
 }
 
 function summarizeVotes(votes: VotesMap) {
+  const voteCount = Object.keys(votes).length;
   const numericValues = Object.values(votes)
     .map(numericVote)
     .filter((value): value is number => value !== null);
@@ -64,14 +65,14 @@ function summarizeVotes(votes: VotesMap) {
   if (numericValues.length === 0) {
     return {
       average: null,
-      voteCount: 0,
+      voteCount,
     };
   }
 
   const total = numericValues.reduce((sum, value) => sum + value, 0);
   return {
     average: Number((total / numericValues.length).toFixed(2)),
-    voteCount: numericValues.length,
+    voteCount,
   };
 }
 
@@ -233,7 +234,8 @@ export class RoomSession extends DurableObject<Env> {
 
   async submitVote(storyId: string, userId: string, voteValue: string) {
     this.assertActive();
-    if (!isPlanningPokerVote(voteValue)) {
+    const cardValues = this.readState().room?.cardValues ?? DEFAULT_CARD_VALUES;
+    if (!isCardDeckVote(voteValue, cardValues)) {
       throw new Error("Invalid vote value.");
     }
 
@@ -255,6 +257,31 @@ export class RoomSession extends DurableObject<Env> {
 
     this.broadcastVotes(storyId);
     return { ok: true };
+  }
+
+  async transferUserIdentity(fromUserId: string, toUserId: string): Promise<void> {
+    this.assertActive();
+    if (fromUserId === toUserId) return;
+
+    for (const table of ["votes", "revealed_votes"] as const) {
+      this.ctx.storage.sql.exec(
+        `INSERT OR IGNORE INTO ${table} (story_id, user_id, vote_value)
+         SELECT story_id, ?, vote_value FROM ${table} WHERE user_id = ?`,
+        toUserId,
+        fromUserId,
+      );
+      this.ctx.storage.sql.exec(`DELETE FROM ${table} WHERE user_id = ?`, fromUserId);
+    }
+
+    for (const socket of this.connectedSockets()) {
+      const user = this.connectionUser(socket);
+      if (user?.id === fromUserId) {
+        socket.serializeAttachment({ ...user, id: toUserId });
+      }
+    }
+
+    this.broadcastSnapshot();
+    this.broadcastPresence();
   }
 
   async beginDelete(): Promise<void> {

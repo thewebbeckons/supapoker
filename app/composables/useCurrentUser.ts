@@ -4,21 +4,26 @@ export interface CurrentUser {
   name: string;
   image?: string | null;
   emailVerified?: boolean;
+  isAnonymous: boolean;
 }
 
 export function useCurrentUser() {
   const user = useState<CurrentUser | null>("current-user", () => null);
   const ready = useState("current-user-ready", () => false);
+  const guestRoomId = useState<string | null>("current-user-guest-room", () => null);
   const fetchSession = import.meta.server ? useRequestFetch() : $fetch;
 
   const loggedIn = computed(() => Boolean(user.value));
+  const isRegistered = computed(() => Boolean(user.value && !user.value.isAnonymous));
 
   async function refresh() {
     try {
-      const session = await fetchSession<{ user: CurrentUser | null }>("/api/session");
+      const session = await fetchSession<{ user: CurrentUser | null; guestRoomId: string | null }>("/api/session");
       user.value = session.user;
+      guestRoomId.value = session.guestRoomId;
     } catch {
       user.value = null;
+      guestRoomId.value = null;
     } finally {
       ready.value = true;
     }
@@ -27,6 +32,7 @@ export function useCurrentUser() {
   async function signOut() {
     await authClient.signOut();
     user.value = null;
+    guestRoomId.value = null;
     ready.value = true;
   }
 
@@ -38,6 +44,8 @@ export function useCurrentUser() {
     user,
     ready,
     loggedIn,
+    isRegistered,
+    guestRoomId,
     refresh,
     signOut,
   };

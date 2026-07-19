@@ -17,6 +17,9 @@
 			"new_sqlite_classes": ["RoomSession"],
 		},
 	],
+	"triggers": {
+		"crons": ["17 3 * * *"],
+	},
 	"send_email": [
 		{
 			"name": "EMAIL",

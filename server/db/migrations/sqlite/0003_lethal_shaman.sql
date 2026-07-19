@@ -1,0 +1,2 @@
+ALTER TABLE `rooms` ADD `card_deck_id` text DEFAULT 'modified-fibonacci' NOT NULL;--> statement-breakpoint
+ALTER TABLE `rooms` ADD `card_values` text DEFAULT '["0","0.5","1","2","3","5","8","13","20","40","100","?","☕"]' NOT NULL;

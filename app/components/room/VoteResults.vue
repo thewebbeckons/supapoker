@@ -1,25 +1,9 @@
 <script lang="ts" setup>
-const CARD_LABELS: Record<string, string> = {
-    '0': '0',
-    '0.5': '½',
-    '1': '1',
-    '2': '2',
-    '3': '3',
-    '5': '5',
-    '8': '8',
-    '13': '13',
-    '20': '20',
-    '40': '40',
-    '100': '100',
-    '?': '?',
-    '☕': '☕'
-}
-
-// Non-numeric values excluded from average calculation
-const NON_NUMERIC_VALUES = ['?', '☕']
+import { displayCardValue } from "~/utils/card-decks";
 
 const props = defineProps<{
     votes: Record<string, string>
+    cards?: string[]
 }>()
 
 // Calculate vote tallies - count how many people voted for each value
@@ -34,11 +18,12 @@ const voteTallies = computed(() => {
     return Object.entries(counts)
         .map(([value, count]) => ({
             value,
-            label: CARD_LABELS[value] || value,
+            label: displayCardValue(value),
             count,
-            isNumeric: !NON_NUMERIC_VALUES.includes(value)
+            isNumeric: Number.isFinite(Number(value)),
+            deckIndex: props.cards?.indexOf(value) ?? -1,
         }))
-        .sort((a, b) => b.count - a.count)
+        .sort((a, b) => b.count - a.count || a.deckIndex - b.deckIndex)
 })
 
 // Calculate total votes for percentage calculation
@@ -53,9 +38,8 @@ const maxCount = computed(() => {
 // Calculate average vote (excluding non-numeric values)
 const averageVote = computed(() => {
     const numericVotes = Object.values(props.votes)
-        .filter(v => !NON_NUMERIC_VALUES.includes(v))
-        .map(v => parseFloat(v))
-        .filter(v => !isNaN(v))
+        .map(v => Number(v))
+        .filter(v => Number.isFinite(v))
     
     if (numericVotes.length === 0) return null
     
@@ -84,7 +68,7 @@ const averageVote = computed(() => {
 
             <div v-else class="tallies">
                 <div v-for="tally in voteTallies" :key="tally.value" class="tally-row">
-                    <div class="result-card">
+                    <div class="result-card" :class="{ wide: tally.label.length > 3 }">
                         <span v-if="tally.value === '☕'" class="text-xl">☕</span>
                         <span v-else>{{ tally.label }}</span>
                     </div>
@@ -111,8 +95,9 @@ const averageVote = computed(() => {
 .average-vote strong { display: grid; width: 7rem; height: 9rem; margin-top: 0.75rem; place-items: center; color: #93c5fd; border: 1px solid #3b82f6; background: #0d1930; box-shadow: 0 16px 30px rgba(0, 0, 0, 0.32); font-size: 2.25rem; font-weight: 500; }
 .no-average, .no-votes { color: #a8a8b2; font-size: 0.78rem; text-align: center; }
 .tallies { display: grid; gap: 0.55rem; margin-top: 1rem; }
-.tally-row { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr) 4rem; gap: 0.75rem; align-items: center; }
+.tally-row { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr) 4rem; gap: 0.75rem; align-items: center; }
 .result-card { display: grid; width: 2.4rem; height: 3rem; place-items: center; color: #c4c4cc; border: 1px solid #3a3a42; background: #101014; font-size: 0.95rem; }
+.result-card.wide { width: 3.5rem; padding-inline: 0.25rem; font-size: 0.65rem; overflow-wrap: anywhere; text-align: center; }
 .bar-track { height: 2px; overflow: hidden; background: #202026; }
 .bar-track i { display: block; height: 100%; background: #2563eb; box-shadow: 0 0 8px #2563eb; transition: width 500ms ease; }
 .bar-track i.neutral { background: #71717a; box-shadow: none; }

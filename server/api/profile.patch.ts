@@ -12,7 +12,7 @@ const profileSchema = z.object({
 });
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAppUser(event);
+  const user = await requireRegisteredAppUser(event);
   const body = await readValidatedBody(event, profileSchema.parse);
   if (body.avatarPath && !body.avatarPath.startsWith(`${user.id}/`)) {
     throw createError({ statusCode: 400, message: "Avatar path must be an uploaded avatar path." });

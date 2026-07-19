@@ -4,6 +4,8 @@ import type { RoomSession } from "../durable-objects/room-session";
 
 export interface AppEnv {
   ROOM_SESSION?: DurableObjectNamespace<RoomSession>;
+  MAINTENANCE_SECRET?: string;
+  TURNSTILE_VERIFIER_URL?: string;
   EMAIL?: {
     send(message: {
       to: string | string[];

@@ -12,7 +12,7 @@ export function useProfile() {
   const profileKey = computed(() => `current-user-profile:${user.value?.id ?? "anonymous"}`);
 
   return useAsyncData(profileKey, async () => {
-    if (!user.value) return null;
+    if (!user.value || user.value.isAnonymous) return null;
 
     return await $fetch<UserProfile>("/api/profile");
   }, {

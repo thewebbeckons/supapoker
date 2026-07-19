@@ -46,9 +46,12 @@ export default defineNuxtConfig({
     betterAuthSecret: requireEnv("BETTER_AUTH_SECRET"),
     githubClientId: requireEnv("GITHUB_CLIENT_ID"),
     githubClientSecret: requireEnv("GITHUB_CLIENT_SECRET"),
+    turnstileVerifierUrl: process.env.TURNSTILE_VERIFIER_URL || "",
+    maintenanceSecret: process.env.MAINTENANCE_SECRET || "",
     emailFrom: process.env.EMAIL_FROM || "SupaPoker <noreply@example.com>",
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || "",
+      turnstileSiteKey: process.env.NUXT_PUBLIC_TURNSTILE_SITE_KEY || "",
     },
   },
   nitro: {

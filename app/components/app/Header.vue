@@ -1,6 +1,10 @@
 <script lang="ts" setup>
 	const { landing = false } = defineProps<{ landing?: boolean }>();
-	const { user, loggedIn, signOut } = useCurrentUser();
+	const { user, loggedIn, isRegistered, guestRoomId, signOut } = useCurrentUser();
+	const route = useRoute();
+	const guestUpgradeRedirect = computed(() => guestRoomId.value
+		? `/rooms/${guestRoomId.value}`
+		: route.fullPath || "/");
 	const isMounted = ref(false);
 
 	onMounted(() => {
@@ -75,7 +79,7 @@
 			>
 		</template>
 		<UNavigationMenu
-			v-if="isMounted && loggedIn"
+			v-if="isMounted && isRegistered"
 			:items="items"
 			class="hidden sm:flex"
 		/>
@@ -104,6 +108,20 @@
 					color="primary"
 					:class="{ 'landing-signup-button': landing }"
 				/>
+			</div>
+			<div
+				v-else-if="user?.isAnonymous"
+				class="hidden items-center gap-2 sm:flex"
+			>
+				<UButton
+					v-if="guestRoomId"
+					label="Open room"
+					:to="`/rooms/${guestRoomId}`"
+					variant="ghost"
+					color="neutral"
+				/>
+				<UButton label="Login" :to="{ path: '/login', query: { redirectTo: guestUpgradeRedirect } }" variant="outline" color="neutral" :class="{ 'landing-login-button': landing }" />
+				<UButton label="Sign up" :to="{ path: '/signup', query: { redirectTo: guestUpgradeRedirect } }" color="primary" :class="{ 'landing-signup-button': landing }" />
 			</div>
 			<UDropdownMenu
 				v-else
@@ -164,6 +182,15 @@
 						color="primary"
 						block
 					/>
+				</div>
+				<div
+					v-else-if="user?.isAnonymous"
+					class="grid gap-2"
+				>
+					<p class="px-2 text-sm text-neutral-400">Playing as {{ userName }}</p>
+					<UButton v-if="guestRoomId" label="Open room" :to="`/rooms/${guestRoomId}`" color="neutral" variant="ghost" block />
+					<UButton label="Login" :to="{ path: '/login', query: { redirectTo: guestUpgradeRedirect } }" color="neutral" variant="outline" :class="{ 'landing-login-button': landing }" block />
+					<UButton label="Sign up" :to="{ path: '/signup', query: { redirectTo: guestUpgradeRedirect } }" color="primary" :class="{ 'landing-signup-button': landing }" block />
 				</div>
 				<div
 					v-else

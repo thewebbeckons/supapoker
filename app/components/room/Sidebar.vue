@@ -75,6 +75,7 @@ const voteProgress = computed(() => {
                     <small class="player-presence" :class="player.isOnline ? 'online' : 'offline'">
                         <i aria-hidden="true" />
                         <span>{{ player.isOnline ? "Online" : "Offline" }}</span>
+                        <span v-if="player.isAnonymous" class="player-role">· Guest</span>
                         <span v-if="player.isModerator" class="player-role">· Facilitator</span>
                     </small>
                 </div>

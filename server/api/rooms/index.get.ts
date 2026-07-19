@@ -2,7 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { db, schema } from "hub:db";
 
 export default defineEventHandler(async (event) => {
-  const user = await requireAppUser(event);
+  const user = await requireRegisteredAppUser(event);
 
   const rows = await db
     .select({ room: schema.rooms })
