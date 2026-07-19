@@ -7,6 +7,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+    (e: 'new-story'): void
     (e: 'set-active', story: Story): void
     (e: 'edit', story: Story): void
     (e: 'delete', story: Story): void
@@ -53,16 +54,31 @@ function statusIcon(status: Story['status']) {
 
 <template>
     <section class="stories-panel">
-        <div class="stories-tabs" role="tablist" aria-label="Story filters">
-            <button type="button" :class="{ active: activeFilter === 'active' }" @click="activeFilter = 'active'">
-                Active stories <small>{{ activeStories.length }}</small>
-            </button>
-            <button type="button" :class="{ active: activeFilter === 'completed' }" @click="activeFilter = 'completed'">
-                Completed <small>{{ completedStories.length }}</small>
-            </button>
-            <button type="button" :class="{ active: activeFilter === 'all' }" @click="activeFilter = 'all'">
-                All <small>{{ allStories.length }}</small>
-            </button>
+        <div class="stories-toolbar">
+            <div class="stories-tabs" role="tablist" aria-label="Story filters">
+                <button type="button" :class="{ active: activeFilter === 'active' }" @click="activeFilter = 'active'">
+                    Active stories <small>{{ activeStories.length }}</small>
+                </button>
+                <button type="button" :class="{ active: activeFilter === 'completed' }" @click="activeFilter = 'completed'">
+                    Completed <small>{{ completedStories.length }}</small>
+                </button>
+                <button type="button" :class="{ active: activeFilter === 'all' }" @click="activeFilter = 'all'">
+                    All <small>{{ allStories.length }}</small>
+                </button>
+            </div>
+
+            <UButton
+                v-if="canManage"
+                class="new-story-button"
+                icon="i-lucide-plus"
+                color="primary"
+                variant="subtle"
+                size="sm"
+                aria-label="New story"
+                @click="emit('new-story')"
+            >
+                <span>New story</span>
+            </UButton>
         </div>
 
         <div class="story-list">
@@ -98,11 +114,13 @@ function statusIcon(status: Story['status']) {
 
 <style scoped>
 .stories-panel { border-top: 1px solid rgba(255, 255, 255, 0.08); background: #0a0a0c; }
-.stories-tabs { display: flex; min-height: 2.75rem; align-items: stretch; gap: 1.5rem; padding: 0 1.4rem; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
+.stories-toolbar { display: flex; min-height: 2.75rem; align-items: stretch; gap: 1rem; padding: 0 1.4rem; border-bottom: 1px solid rgba(255, 255, 255, 0.07); }
+.stories-tabs { display: flex; min-width: 0; align-items: stretch; gap: 1.5rem; }
 .stories-tabs button { display: flex; align-items: center; gap: 0.4rem; color: #a1a1aa; border-bottom: 1px solid transparent; font-size: 0.66rem; letter-spacing: 0.11em; text-transform: uppercase; cursor: pointer; }
 .stories-tabs button:hover { color: #c4c4cc; }
 .stories-tabs button.active { color: #d4d4d8; border-bottom-color: #3b82f6; }
 .stories-tabs small { display: grid; min-width: 1.1rem; height: 1.1rem; place-items: center; color: #b4b4bd; border: 1px solid #34343b; font-size: 0.58rem; letter-spacing: 0; }
+.new-story-button { align-self: center; margin-left: auto; border-radius: 0; }
 .story-list { min-height: 8.5rem; max-height: 13rem; overflow-y: auto; }
 .story-row { display: grid; grid-template-columns: 1rem minmax(0, 1fr) auto auto; align-items: center; gap: 0.7rem; min-height: 2.9rem; padding: 0 1.4rem; color: #a1a1aa; border-bottom: 1px solid rgba(255, 255, 255, 0.06); font-size: 0.78rem; }
 .story-row:last-child { border-bottom: 0; }
@@ -119,10 +137,17 @@ function statusIcon(status: Story['status']) {
 .empty-stories :deep(svg) { width: 0.9rem; height: 0.9rem; }
 
 @media (max-width: 560px) {
-    .stories-tabs { gap: 0.75rem; padding-inline: 0.85rem; }
+    .stories-toolbar { gap: 0.75rem; padding-inline: 0.85rem; }
+    .stories-tabs { gap: 0.75rem; }
     .stories-tabs button { font-size: 0.58rem; }
     .story-row { grid-template-columns: 1rem minmax(0, 1fr) auto; padding-inline: 0.85rem; }
     .story-status { display: none; }
     .story-actions { min-width: 4rem; opacity: 1; }
+}
+
+@media (max-width: 420px) {
+    .stories-toolbar { gap: 0.5rem; }
+    .stories-tabs { gap: 0.55rem; }
+    .new-story-button span { display: none; }
 }
 </style>

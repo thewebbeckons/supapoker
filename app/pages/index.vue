@@ -14,6 +14,15 @@ useSeoMeta({
   description: 'A fast, real-time planning poker room for focused agile teams.'
 })
 
+const heroCards = [
+  { value: '3', className: 'deck-card-1' },
+  { value: '5', className: 'deck-card-2' },
+  { value: '8', className: 'deck-card-3' },
+  { value: '13', className: 'deck-card-4' },
+  { value: '?', className: 'deck-card-5' },
+  { value: '2', className: 'deck-card-6' }
+]
+
 const features = [
   {
     index: '01',
@@ -41,23 +50,35 @@ const features = [
     <section class="landing-hero" aria-labelledby="landing-title">
       <div class="hero-glow" aria-hidden="true" />
       <div class="hero-grid" aria-hidden="true" />
+      <div class="floating-deck" aria-hidden="true">
+        <div
+          v-for="card in heroCards"
+          :key="card.className"
+          class="flip-card"
+          :class="card.className"
+        >
+          <div class="flip-card-inner">
+            <div class="card-face card-back"><span>SP</span></div>
+            <div class="card-face card-front">
+              <small>{{ card.value }}</small>
+              <strong>{{ card.value }}</strong>
+              <small>{{ card.value }}</small>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <div class="hero-copy">
-        <div class="eyebrow reveal reveal-1">
-          <span class="eyebrow-dot" />
-          REAL-TIME PLANNING POKER
-        </div>
-
-        <h1 id="landing-title" class="reveal reveal-2">
+        <h1 id="landing-title" class="reveal reveal-1">
           Estimates without<br>
           the <span>ceremony.</span>
         </h1>
 
-        <p class="hero-description reveal reveal-3">
-          SupaPoker gives your team one focused room to discuss, vote, and move on. No bloated workspace required.
+        <p class="hero-description reveal reveal-2">
+          Start right now. Vote in real time. Get back to literally anything else.
         </p>
 
-        <div class="hero-actions reveal reveal-4">
+        <div class="hero-actions reveal reveal-3">
           <UButton
             to="/signup"
             size="xl"
@@ -79,7 +100,7 @@ const features = [
           </UButton>
         </div>
 
-        <p class="hero-note reveal reveal-4">
+        <p class="hero-note reveal reveal-3">
           <UIcon name="i-lucide-circle-check" />
           Free to start · no credit card
         </p>
@@ -177,7 +198,6 @@ const features = [
 
 .hero-copy { max-width: 880px; }
 
-.eyebrow,
 .preview-label,
 .section-heading > p,
 .landing-cta > p,
@@ -187,17 +207,6 @@ const features = [
   letter-spacing: 0.16em;
 }
 
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.65rem;
-  color: #a1a1aa;
-  border: 1px solid var(--landing-line);
-  padding: 0.55rem 0.8rem;
-  background: rgba(9, 9, 11, 0.76);
-}
-
-.eyebrow-dot,
 .preview-status i {
   width: 5px;
   height: 5px;
@@ -207,7 +216,6 @@ const features = [
 }
 
 h1 {
-  margin-top: 1.8rem;
   font-size: clamp(3.25rem, 8vw, 6.6rem);
   font-weight: 450;
   line-height: 0.98;
@@ -219,12 +227,73 @@ h1 {
 h1 span { color: #3b82f6; }
 
 .hero-description {
-  max-width: 660px;
+  max-width: 620px;
   margin: 1.8rem auto 0;
   color: var(--landing-muted);
   font-size: clamp(0.95rem, 2vw, 1.1rem);
   line-height: 1.75;
 }
+
+.floating-deck {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  perspective: 1000px;
+  pointer-events: none;
+}
+
+.flip-card {
+  position: absolute;
+  width: clamp(54px, 6vw, 82px);
+  aspect-ratio: .68;
+  perspective: 800px;
+  opacity: .44;
+}
+
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: hero-card-flip 8s cubic-bezier(.7,0,.3,1) infinite;
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #303038;
+  background: #101014;
+  backface-visibility: hidden;
+}
+
+.card-back {
+  color: #3b82f6;
+  background:
+    linear-gradient(135deg, transparent 48%, rgba(59,130,246,.22) 49% 51%, transparent 52%),
+    #0d111b;
+}
+
+.card-back span { font-size: .7rem; letter-spacing: .12em; }
+.card-front { color: #a9a9b2; transform: rotateY(180deg); }
+.card-front strong { font-size: 1.35rem; font-weight: 450; }
+.card-front small { position: absolute; font-size: .45rem; }
+.card-front small:first-child { top: .4rem; left: .45rem; }
+.card-front small:last-child { right: .45rem; bottom: .4rem; transform: rotate(180deg); }
+
+.deck-card-1 { top: 18%; left: 9%; transform: rotate(-12deg); }
+.deck-card-2 { top: 20%; right: 11%; transform: rotate(9deg); }
+.deck-card-3 { bottom: 18%; left: 16%; transform: rotate(7deg); }
+.deck-card-4 { right: 18%; bottom: 14%; transform: rotate(-8deg); }
+.deck-card-5 { top: 9%; left: 35%; transform: rotate(5deg) scale(.78); opacity: .22; }
+.deck-card-6 { right: 34%; bottom: 5%; transform: rotate(13deg) scale(.72); opacity: .18; }
+.deck-card-2 .flip-card-inner { animation-delay: -1.4s; }
+.deck-card-3 .flip-card-inner { animation-delay: -3.2s; }
+.deck-card-4 .flip-card-inner { animation-delay: -5.1s; }
+.deck-card-5 .flip-card-inner { animation-delay: -2.4s; }
+.deck-card-6 .flip-card-inner { animation-delay: -6.4s; }
 
 .hero-actions {
   display: flex;
@@ -333,6 +402,12 @@ h1 span { color: #3b82f6; }
   to { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
 
+@keyframes hero-card-flip {
+  0%, 32% { transform: rotateY(0deg) translateY(0); }
+  45%, 82% { transform: rotateY(180deg) translateY(-7px); }
+  95%, 100% { transform: rotateY(360deg) translateY(0); }
+}
+
 @keyframes live-pulse {
   0%, 100% { opacity: 0.5; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1.2); }
@@ -340,6 +415,8 @@ h1 span { color: #3b82f6; }
 
 @media (max-width: 820px) {
   .landing-hero { min-height: 590px; padding-top: 5rem; }
+  .flip-card { opacity: .26; }
+  .deck-card-5, .deck-card-6 { display: none; }
   .preview-section { padding: 0 1rem 4rem; }
   .features-section { padding: 5rem 1.25rem; }
   .features-grid { grid-template-columns: 1fr; }
@@ -349,10 +426,14 @@ h1 span { color: #3b82f6; }
 @media (max-width: 520px) {
   h1 { font-size: 3.25rem; }
   .hero-actions { flex-direction: column; align-items: stretch; }
+  .deck-card-1 { left: 1%; }
+  .deck-card-2 { right: 2%; }
+  .deck-card-3 { left: 5%; }
+  .deck-card-4 { right: 7%; }
   .preview-label { font-size: 0.6rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .reveal, .preview-status i { animation: none; }
+  .reveal, .preview-status i, .flip-card-inner { animation: none; }
 }
 </style>

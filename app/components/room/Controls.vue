@@ -4,7 +4,6 @@ const { canEdit } = defineProps<{
 }>()
 
 const emit = defineEmits<{
-    (e: 'new-story'): void
     (e: 'invite-teammate'): void
     (e: 'edit-room'): void
     (e: 'delete-room'): void
@@ -38,8 +37,9 @@ const settingsItems = computed(() => {
 
 <template>
     <div class="room-controls">
-        <UButton v-if="canEdit" label="New story" icon="i-lucide-plus" color="primary" variant="subtle" size="sm"
-            @click="emit('new-story')" />
+        <div v-if="$slots.default" class="room-actions">
+            <slot />
+        </div>
 
         <UDropdownMenu v-if="canEdit" :items="settingsItems" :content="{ align: 'end', side: 'bottom' }">
             <UButton icon="i-lucide-ellipsis" color="neutral" variant="ghost" size="sm" aria-label="Room settings" />
@@ -49,5 +49,11 @@ const settingsItems = computed(() => {
 
 <style scoped>
 .room-controls { display: flex; align-items: center; gap: 0.35rem; }
+.room-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.4rem; }
 .room-controls :deep(button) { border-radius: 0; }
+
+@media (max-width: 520px) {
+    .room-controls { align-items: flex-start; }
+    .room-actions { max-width: 11rem; }
+}
 </style>

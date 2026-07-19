@@ -360,11 +360,79 @@ watch(stories, (nextStories) => {
                     </div>
                     <RoomControls
                         :can-edit="canEdit"
-                        @new-story="isNewStoryModalOpen = true"
                         @invite-teammate="copyRoomUrl"
                         @edit-room="openEditModal"
                         @delete-room="isDeleteModalOpen = true"
-                    />
+                    >
+                        <template v-if="canEdit && activeStory">
+                            <UButton
+                                v-if="pendingStoryActionType === 'startVote'"
+                                size="sm"
+                                color="primary"
+                                variant="subtle"
+                                icon="i-lucide-loader-circle"
+                                loading
+                                disabled
+                            >
+                                Starting Vote
+                            </UButton>
+                            <UButton
+                                v-else-if="pendingStoryActionType === 'stopVote'"
+                                size="sm"
+                                color="error"
+                                variant="subtle"
+                                icon="i-lucide-loader-circle"
+                                loading
+                                disabled
+                            >
+                                Stopping Vote
+                            </UButton>
+                            <UButton
+                                v-else-if="isVoting"
+                                size="sm"
+                                color="error"
+                                variant="subtle"
+                                icon="i-lucide-square"
+                                :disabled="isStoryActionPending"
+                                @click="stopVote"
+                            >
+                                Stop Vote
+                            </UButton>
+                            <template v-else-if="isVoted">
+                                <UButton
+                                    size="sm"
+                                    color="primary"
+                                    variant="subtle"
+                                    icon="i-lucide-rotate-ccw"
+                                    :disabled="isStoryActionPending"
+                                    @click="startVote"
+                                >
+                                    Restart Vote
+                                </UButton>
+                                <UButton
+                                    size="sm"
+                                    color="success"
+                                    variant="subtle"
+                                    icon="i-lucide-check-circle"
+                                    :disabled="isStoryActionPending"
+                                    @click="isStoryCompleteModalOpen = true"
+                                >
+                                    Complete Story
+                                </UButton>
+                            </template>
+                            <UButton
+                                v-else
+                                size="sm"
+                                color="primary"
+                                variant="solid"
+                                icon="i-lucide-play-circle"
+                                :disabled="isStoryActionPending"
+                                @click="startVote"
+                            >
+                                Start Vote
+                            </UButton>
+                        </template>
+                    </RoomControls>
                 </header>
 
                 <section class="vote-stage">
@@ -386,78 +454,6 @@ watch(stories, (nextStories) => {
                                 <i />
                                 {{ isVoting ? "Voting open" : isVoted ? "Votes revealed" : "Ready to vote" }}
                                 <RoomTimer v-if="isVoting" :story="activeStory" />
-                            </div>
-                            <div v-if="canEdit" class="vote-actions">
-                                <template v-if="pendingStoryActionType === 'startVote'">
-                                    <UButton
-                                        size="sm"
-                                        color="primary"
-                                        variant="subtle"
-                                        icon="i-lucide-loader-circle"
-                                        loading
-                                        disabled
-                                    >
-                                        Starting Vote
-                                    </UButton>
-                                </template>
-                                <template v-else-if="pendingStoryActionType === 'stopVote'">
-                                    <UButton
-                                        size="sm"
-                                        color="error"
-                                        variant="subtle"
-                                        icon="i-lucide-loader-circle"
-                                        loading
-                                        disabled
-                                    >
-                                        Stopping Vote
-                                    </UButton>
-                                </template>
-                                <template v-else-if="isVoting">
-                                    <UButton
-                                        size="sm"
-                                        color="error"
-                                        variant="subtle"
-                                        icon="i-lucide-square"
-                                        :disabled="isStoryActionPending"
-                                        @click="stopVote"
-                                    >
-                                        Stop Vote
-                                    </UButton>
-                                </template>
-                                <template v-else-if="isVoted">
-                                    <UButton
-                                        size="sm"
-                                        color="primary"
-                                        variant="subtle"
-                                        icon="i-lucide-rotate-ccw"
-                                        :disabled="isStoryActionPending"
-                                        @click="startVote"
-                                    >
-                                        Restart Vote
-                                    </UButton>
-                                    <UButton
-                                        size="sm"
-                                        color="success"
-                                        variant="subtle"
-                                        icon="i-lucide-check-circle"
-                                        :disabled="isStoryActionPending"
-                                        @click="isStoryCompleteModalOpen = true"
-                                    >
-                                        Complete Story
-                                    </UButton>
-                                </template>
-                                <template v-else>
-                                    <UButton
-                                        size="sm"
-                                        color="primary"
-                                        variant="solid"
-                                        icon="i-lucide-play-circle"
-                                        :disabled="isStoryActionPending"
-                                        @click="startVote"
-                                    >
-                                        Start Vote
-                                    </UButton>
-                                </template>
                             </div>
                         </template>
                         <template v-else>
@@ -482,6 +478,7 @@ watch(stories, (nextStories) => {
                 <RoomStoriesPanel
                     :stories="stories"
                     :can-manage="canEdit"
+                    @new-story="isNewStoryModalOpen = true"
                     @set-active="setActive"
                     @edit="onEditStory"
                     @delete="onDeleteStory"
@@ -623,7 +620,6 @@ watch(stories, (nextStories) => {
 .story-state.live { color: #7ab8ff; }
 .story-state > i { width: 5px; height: 5px; border-radius: 999px; background: currentColor; }
 .story-state :deep(.room-timer) { margin-left: 0.35rem; }
-.vote-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 0.5rem; margin-top: 1.25rem; }
 .empty-story-copy { margin-top: 0.6rem; color: #a8a8b2; font-size: 0.82rem; }
 
 @media (max-width: 960px) {
