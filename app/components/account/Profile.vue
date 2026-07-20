@@ -20,7 +20,7 @@ const profileState = reactive<ProfileSchema>({
 });
 const avatarUrl = ref<string | null>(null);
 
-const { data: profile } = useProfile();
+const { data: profile } = await useProfile();
 
 watch(profile, (newProfile) => {
   if (newProfile) {

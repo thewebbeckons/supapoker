@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { useClipboard } from "@vueuse/core";
 import type { Room, Story, TransferCandidate } from "~/types/room";
-import { DEFAULT_CARD_VALUES, getCardDeckName } from "~/utils/card-decks";
+import { DEFAULT_CARD_VALUES } from "~/utils/card-decks";
 
 const route = useRoute();
 
@@ -384,13 +384,6 @@ watch(stories, (nextStories) => {
                         <p class="room-kicker">PLANNING ROOM · {{ roomId.slice(0, 8) }}</p>
                         <h1>{{ room?.name }}</h1>
                         <p class="room-description">{{ room?.description || "Estimate together, then reveal as a team." }}</p>
-                        <UBadge
-                            :label="`${getCardDeckName(room?.cardDeckId ?? 'modified-fibonacci')} · ${room?.cardValues.length ?? DEFAULT_CARD_VALUES.length} cards`"
-                            color="neutral"
-                            variant="subtle"
-                            size="sm"
-                            class="room-deck-badge"
-                        />
                     </div>
                     <RoomControls
                         :can-edit="canEdit"
@@ -622,7 +615,6 @@ watch(stories, (nextStories) => {
 .room-kicker { color: #60a5fa; }
 .room-header h1 { margin-top: 0.4rem; color: #fafafa; font-size: 1.35rem; font-weight: 600; }
 .room-description { margin-top: 0.3rem; color: #b4b4bd; font-size: 0.86rem; }
-.room-deck-badge { margin-top: 0.7rem; }
 
 .vote-stage {
     position: relative;

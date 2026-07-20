@@ -68,8 +68,7 @@
 		}"
 	>
 		<template #title>
-			<NuxtLink
-				to="/"
+			<span
 				class="flex items-center gap-2 font-bold text-xl"
 				:style="landing ? { color: '#f4f4f5' } : undefined"
 			>
@@ -79,7 +78,7 @@
 					class="h-8 w-8"
 				/>
 				SupaPoker
-			</NuxtLink>
+			</span>
 			<UBadge
 				color="info"
 				variant="subtle"

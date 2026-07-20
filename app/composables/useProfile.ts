@@ -10,11 +10,12 @@ export interface UserProfile {
 export function useProfile() {
   const { user } = useCurrentUser();
   const profileKey = computed(() => `current-user-profile:${user.value?.id ?? "anonymous"}`);
+  const fetchProfile = import.meta.server ? useRequestFetch() : $fetch;
 
   return useAsyncData(profileKey, async () => {
     if (!user.value || user.value.isAnonymous) return null;
 
-    return await $fetch<UserProfile>("/api/profile");
+    return await fetchProfile<UserProfile>("/api/profile");
   }, {
     default: () => null,
   });
