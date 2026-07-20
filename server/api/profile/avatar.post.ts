@@ -1,7 +1,9 @@
+import { useLogger } from "evlog";
 import { blob } from "hub:blob";
 import { db, schema } from "hub:db";
 
 export default defineEventHandler(async (event) => {
+  const log = useLogger(event);
   const user = await requireRegisteredAppUser(event);
   const contentLength = Number(getRequestHeader(event, "content-length") ?? 0);
   if (Number.isFinite(contentLength) && contentLength > MAX_AVATAR_REQUEST_BYTES) {
@@ -52,11 +54,10 @@ export default defineEventHandler(async (event) => {
       `avatars/${user.id}/avatar.png`,
     ]);
   } catch (error) {
-    console.error(JSON.stringify({
-      message: "unable to remove legacy avatar objects",
-      userId: user.id,
-      error: error instanceof Error ? error.message : String(error),
-    }));
+    log.error(
+      error instanceof Error ? error : String(error),
+      { operation: "profile.avatar.legacy-cleanup" },
+    );
   }
 
   await syncUserRoomSessions(event, user.id);

@@ -3,6 +3,7 @@
 	"name": "supapoker",
 	"compatibility_date": "2026-06-14",
 	"compatibility_flags": ["nodejs_compat"],
+	"upload_source_maps": true,
 	"durable_objects": {
 		"bindings": [
 			{

@@ -1,3 +1,4 @@
+import { useLogger } from "evlog";
 import type { H3Event } from "h3";
 
 function parseFrom(value: string) {
@@ -19,9 +20,10 @@ export async function sendTransactionalEmail(
   const env = getCloudflareEnv(event);
 
   if (!env.EMAIL) {
-    console.error("[email] EMAIL binding missing; transactional email not sent", {
-      subject: input.subject,
-    });
+    useLogger(event).error(
+      "Email binding is unavailable",
+      { operation: "email.send" },
+    );
 
     throw createError({
       statusCode: 500,
