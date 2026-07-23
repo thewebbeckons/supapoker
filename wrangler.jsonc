@@ -30,6 +30,8 @@
 	"vars": {
 		"NUXT_PUBLIC_SITE_URL": "https://supapoker.dev",
 		"EMAIL_FROM": "SupaPoker <noreply@supapoker.dev>",
+		"NUXT_PUBLIC_POSTHOG_PROJECT_TOKEN": "phc_t79D8ei55hujfXtZSbAUCt7ifMwMLr6Y5J8KYtZmELXC",
+		"NUXT_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
 	},
 	"observability": {
 		"logs": {
