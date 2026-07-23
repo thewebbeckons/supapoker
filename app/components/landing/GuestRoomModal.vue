@@ -4,6 +4,7 @@ import type { Room } from "~/types/room";
 const open = defineModel<boolean>({ default: false });
 const { user, guestRoomId, refresh } = useCurrentUser();
 const config = useRuntimeConfig();
+const posthog = usePostHog();
 const toast = useToast();
 const step = ref<1 | 2>(1);
 const name = ref("");
@@ -54,6 +55,7 @@ async function createRoom() {
         turnstileToken: turnstileToken.value,
       },
     });
+    posthog?.capture("guest_room_created");
     await refresh();
     open.value = false;
     await navigateTo(`/rooms/${room.id}`);

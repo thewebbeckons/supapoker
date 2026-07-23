@@ -10,6 +10,7 @@ const route = useRoute();
 const toast = useToast();
 const submittedEmail = ref("");
 const { user } = useCurrentUser();
+const posthog = usePostHog();
 
 function getPostAuthPath() {
   const redirectTo = route.query.redirectTo;
@@ -65,6 +66,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
 
   submittedEmail.value = payload.data.email;
   state.password = "";
+  posthog?.capture("user_signed_up", { method: "email" });
 
   toast.add({
     title: "Check your email",
@@ -74,6 +76,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
 }
 
 async function signInWithGithub() {
+  posthog?.capture("github_login_initiated", { page: "signup" });
   await authClient.signIn.social({
     provider: "github",
     callbackURL: getPostAuthPath(),

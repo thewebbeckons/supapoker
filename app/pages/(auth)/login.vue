@@ -12,6 +12,7 @@ const loading = ref(false);
 const authForm = useTemplateRef<{ state: { password?: string } }>("authForm");
 const hasRedirected = ref(false);
 const { user, refresh } = useCurrentUser();
+const posthog = usePostHog();
 
 const fields: AuthFormField[] = [{
   name: "email",
@@ -77,6 +78,10 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     }
 
     await refresh();
+    if (user.value) {
+      posthog?.identify(user.value.id, { name: user.value.name });
+      posthog?.capture("user_logged_in", { method: "email" });
+    }
     await navigateTo(getPostAuthPath());
   } catch (error) {
     toast.add({
@@ -90,6 +95,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
 }
 
 async function signInWithGithub() {
+  posthog?.capture("github_login_initiated", { page: "login" });
   await authClient.signIn.social({
     provider: "github",
     callbackURL: getPostAuthPath(),

@@ -9,6 +9,7 @@ const roomId = computed(() => String(route.params.id));
 const { user, refresh: refreshCurrentUser } = useCurrentUser();
 const toast = useToast();
 const { copy } = useClipboard();
+const posthog = usePostHog();
 
 const isEditModalOpen = ref(false);
 const isDeleteModalOpen = ref(false);
@@ -94,6 +95,7 @@ async function joinRoom() {
             body: user.value?.isAnonymous ? { name: joinDisplayName.value } : {},
         });
         await Promise.all([refreshCurrentUser(), refreshAccess()]);
+        posthog?.capture("room_joined", { room_id: roomId.value, is_guest: Boolean(user.value?.isAnonymous) });
         isJoinModalOpen.value = false;
     } catch (error: any) {
         toast.add({

@@ -20,6 +20,7 @@ definePageMeta({
 
 const { user } = useCurrentUser();
 const toast = useToast();
+const posthog = usePostHog();
 const search = ref("");
 const isCreateRoomModalOpen = ref(false);
 const isCreatingRoom = ref(false);
@@ -85,6 +86,8 @@ async function createRoom() {
         ...(newRoomCardDeckId.value === "custom" ? { cardValues: parsedCustomCardValues.value } : {}),
       },
     });
+
+    posthog?.capture("room_created", { card_deck_id: newRoomCardDeckId.value });
 
     toast.add({
       title: "Room Created",
