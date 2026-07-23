@@ -1,6 +1,5 @@
 <script setup lang="ts">
 	const { landing = false } = defineProps<{ landing?: boolean }>();
-	const year = new Date().getUTCFullYear();
 </script>
 
 <template>
@@ -8,19 +7,15 @@
 		<template #left> SupaPoker </template>
 		<template #right>
 			<NuxtLink
-				to="https://buymeacoffee.com/667z7beckons"
-				external
-				target="_blank"
-				rel="noopener noreferrer"
-				aria-label="Buy me a coffee (opens in a new tab)"
+				to="/about"
 				class="inline-flex items-center gap-1.5 text-muted hover:text-toned focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
 			>
 				<UIcon
-					name="i-lucide-coffee"
+					name="i-lucide-info"
 					class="size-3.5"
 					aria-hidden="true"
 				/>
-				<span>Buy me a coffee</span>
+				<span>About</span>
 			</NuxtLink>
 		</template>
 	</UFooter>
