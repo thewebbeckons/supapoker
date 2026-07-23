@@ -173,7 +173,10 @@ export async function cleanupStaleGuests(event: H3Event) {
       if (ownedStub) await ownedStub.cancelDelete();
       log.error(
         error instanceof Error ? error : String(error),
-        { operation: "guest.cleanup.delete" },
+        {
+          operation: "guest.cleanup.delete",
+          userId: candidate.id,
+        },
       );
       continue;
     }
@@ -186,7 +189,11 @@ export async function cleanupStaleGuests(event: H3Event) {
       } catch (error) {
         log.error(
           error instanceof Error ? error : String(error),
-          { operation: "guest.cleanup.realtime-finalize" },
+          {
+            operation: "guest.cleanup.realtime-finalize",
+            userId: candidate.id,
+            roomId: ownedRoom?.roomId,
+          },
         );
       }
     }

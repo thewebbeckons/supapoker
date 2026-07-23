@@ -28,7 +28,6 @@ export default defineNuxtConfig({
     env: {
       service: "supapoker",
     },
-    console: false,
     transport: {
       enabled: false,
     },

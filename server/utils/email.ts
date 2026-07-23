@@ -22,7 +22,11 @@ export async function sendTransactionalEmail(
   if (!env.EMAIL) {
     useLogger(event).error(
       "Email binding is unavailable",
-      { operation: "email.send" },
+      {
+        operation: "email.send",
+        subject: input.subject,
+        to: input.to,
+      },
     );
 
     throw createError({
