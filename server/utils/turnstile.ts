@@ -1,3 +1,4 @@
+import { useLogger } from "evlog";
 import type { H3Event } from "h3";
 
 interface TurnstileVerification {
@@ -34,7 +35,10 @@ export async function verifyGuestRoomCreation(event: H3Event, token: string) {
     if (!response.ok) throw new Error(`Verifier returned ${response.status}`);
     result = await response.json() as TurnstileVerification;
   } catch (error) {
-    console.error("[turnstile] Managed verifier unavailable", { error });
+    useLogger(event).error(
+      error instanceof Error ? error : String(error),
+      { operation: "turnstile.verify" },
+    );
     throw createError({
       statusCode: 503,
       message: "Guest room creation is temporarily unavailable.",

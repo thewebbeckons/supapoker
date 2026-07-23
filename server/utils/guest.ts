@@ -1,4 +1,5 @@
 import { and, eq, gt, isNull, lt, notExists, or } from "drizzle-orm";
+import { useLogger } from "evlog";
 import type { H3Event } from "h3";
 import { db, schema } from "hub:db";
 
@@ -123,6 +124,7 @@ export async function linkAnonymousAppData(
 }
 
 export async function cleanupStaleGuests(event: H3Event) {
+  const log = useLogger(event);
   const now = new Date();
   const staleBefore = new Date(now.getTime() - STALE_GUEST_AGE_MS);
   const hasActiveSession = db
@@ -169,7 +171,13 @@ export async function cleanupStaleGuests(event: H3Event) {
     } catch (error) {
       failedUsers += 1;
       if (ownedStub) await ownedStub.cancelDelete();
-      console.error("[guest-cleanup] Failed to delete stale guest", { userId: candidate.id, error });
+      log.error(
+        error instanceof Error ? error : String(error),
+        {
+          operation: "guest.cleanup.delete",
+          userId: candidate.id,
+        },
+      );
       continue;
     }
 
@@ -179,10 +187,14 @@ export async function cleanupStaleGuests(event: H3Event) {
       try {
         await ownedStub.finalizeDelete();
       } catch (error) {
-        console.error("[guest-cleanup] Failed to finalize room deletion", {
-          roomId: ownedRoom?.roomId,
-          error,
-        });
+        log.error(
+          error instanceof Error ? error : String(error),
+          {
+            operation: "guest.cleanup.realtime-finalize",
+            userId: candidate.id,
+            roomId: ownedRoom?.roomId,
+          },
+        );
       }
     }
 

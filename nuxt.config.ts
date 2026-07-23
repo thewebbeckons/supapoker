@@ -22,7 +22,57 @@ export default defineNuxtConfig({
     "@vueuse/nuxt",
     "@nuxt/hints",
     "nuxt-email-renderer",
+    "evlog/nuxt",
   ],
+  evlog: {
+    env: {
+      service: "supapoker",
+    },
+    transport: {
+      enabled: false,
+    },
+    exclude: [
+      "/_nuxt/**",
+      "/api/_nuxt_icon/**",
+      "/api/_evlog/**",
+      "/favicon.ico",
+      "/robots.txt",
+    ],
+    redact: {
+      paths: [
+        "authorization",
+        "cookie",
+        "set-cookie",
+        "password",
+        "secret",
+        "token",
+        "*_token",
+        "*Token",
+        "email",
+        "body",
+        "content",
+        "room.name",
+        "room.description",
+        "story.title",
+      ],
+    },
+  },
+  $production: {
+    evlog: {
+      sampling: {
+        rates: {
+          debug: 0,
+          info: 10,
+          warn: 50,
+          error: 100,
+        },
+        keep: [
+          { status: 400 },
+          { duration: 1000 },
+        ],
+      },
+    },
+  },
   ui: {
     colorMode: false,
   },

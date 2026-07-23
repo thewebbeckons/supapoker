@@ -1,7 +1,9 @@
 import { eq } from "drizzle-orm";
+import { useLogger } from "evlog";
 import { db, schema } from "hub:db";
 
 export default defineEventHandler(async (event) => {
+  const log = useLogger(event);
   const user = await requireAppUser(event);
   const roomId = getRouterParam(event, "roomId");
   if (!roomId) throw createError({ statusCode: 400, message: "Room ID is required." });
@@ -16,10 +18,10 @@ export default defineEventHandler(async (event) => {
     try {
       await stub.cancelDelete();
     } catch (rollbackError) {
-      console.error("[rooms] Failed to roll back realtime room deletion", {
-        roomId,
-        error: rollbackError,
-      });
+      log.error(
+        rollbackError instanceof Error ? rollbackError : String(rollbackError),
+        { operation: "room.delete.realtime-rollback" },
+      );
     }
     throw error;
   }
@@ -27,7 +29,10 @@ export default defineEventHandler(async (event) => {
   try {
     await stub.finalizeDelete();
   } catch (error) {
-    console.error("[rooms] Failed to finalize realtime room deletion", { roomId, error });
+    log.error(
+      error instanceof Error ? error : String(error),
+      { operation: "room.delete.realtime-finalize" },
+    );
   }
 
   return { ok: true };

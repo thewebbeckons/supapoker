@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { anonymous } from "better-auth/plugins";
+import { useLogger } from "evlog";
 import { toWebRequest, type H3Event } from "h3";
 import { db } from "hub:db";
 import * as schema from "../db/schema";
@@ -110,9 +111,32 @@ export function createAuth(event: H3Event) {
 }
 
 export async function getAppSession(event: H3Event) {
-  const auth = createAuth(event);
-  const request = toWebRequest(event);
-  return auth.api.getSession({ headers: request.headers });
+  const log = useLogger(event);
+  log.set({ auth: { operation: "session.lookup" } });
+
+  try {
+    const auth = createAuth(event);
+    const request = toWebRequest(event);
+    const session = await auth.api.getSession({ headers: request.headers });
+
+    log.set({
+      auth: {
+        operation: "session.lookup",
+        outcome: session?.user ? "authenticated" : "anonymous",
+        principal: session?.user
+          ? (isAnonymousAppUser(session.user) ? "guest" : "registered")
+          : "none",
+      },
+    });
+
+    return session;
+  } catch (error) {
+    log.error(
+      error instanceof Error ? error : String(error),
+      { operation: "auth.session.lookup" },
+    );
+    throw error;
+  }
 }
 
 export async function requireAppUser(event: H3Event) {
