@@ -1,12 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  middleware: [
-    async function () {
-      const { user, ready, refresh } = useCurrentUser()
-      if (!ready.value) await refresh()
-      if (user.value && !user.value.isAnonymous) return navigateTo('/rooms')
-    }
-  ]
+  middleware: ['redirect-authenticated']
 })
 
 const isGuestRoomModalOpen = ref(false)
