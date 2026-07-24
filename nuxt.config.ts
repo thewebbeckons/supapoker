@@ -113,6 +113,7 @@ export default defineNuxtConfig({
     publicKey: process.env.NUXT_PUBLIC_POSTHOG_PROJECT_TOKEN || "",
     host: process.env.NUXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
     clientConfig: {
+      capture_pageview: "history_change",
       capture_exceptions: true,
       __add_tracing_headers: ["localhost", "supapoker.com"],
     },
