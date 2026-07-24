@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 	const { landing = false } = defineProps<{ landing?: boolean }>();
 	const { user, loggedIn, isRegistered, guestRoomId, signOut } = useCurrentUser();
+	const posthog = usePostHog();
 	const route = useRoute();
 	const guestUpgradeRedirect = computed(() => guestRoomId.value
 		? `/rooms/${guestRoomId.value}`
@@ -12,6 +13,8 @@
 	});
 
 	async function logout() {
+		posthog?.capture("user_logged_out");
+		posthog?.reset();
 		await signOut();
 		await navigateTo("/");
 	}

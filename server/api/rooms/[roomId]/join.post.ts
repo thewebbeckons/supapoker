@@ -38,5 +38,16 @@ export default defineEventHandler(async (event) => {
   }
 
   await syncRoomSession(event, roomId);
+
+  const posthog = useServerPostHog();
+  const sessionId = getHeader(event, "x-posthog-session-id");
+  const distinctId = getHeader(event, "x-posthog-distinct-id") || user.id;
+  posthog.capture({
+    distinctId,
+    event: "server_room_joined",
+    properties: { $session_id: sessionId, room_id: roomId, is_guest: isAnonymousAppUser(user) },
+  });
+  await posthog.flush();
+
   return { ok: true };
 });

@@ -23,6 +23,7 @@ export default defineNuxtConfig({
     "@nuxt/hints",
     "nuxt-email-renderer",
     "evlog/nuxt",
+    "@posthog/nuxt",
   ],
   evlog: {
     env: {
@@ -102,6 +103,21 @@ export default defineNuxtConfig({
     public: {
       siteUrl: process.env.NUXT_PUBLIC_SITE_URL || "",
       turnstileSiteKey: process.env.NUXT_PUBLIC_TURNSTILE_SITE_KEY || "",
+      posthog: {
+        publicKey: process.env.NUXT_PUBLIC_POSTHOG_PROJECT_TOKEN || "",
+        host: process.env.NUXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+      },
+    },
+  },
+  posthogConfig: {
+    publicKey: process.env.NUXT_PUBLIC_POSTHOG_PROJECT_TOKEN || "",
+    host: process.env.NUXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com",
+    clientConfig: {
+      capture_exceptions: true,
+      __add_tracing_headers: ["localhost", "supapoker.com"],
+    },
+    serverConfig: {
+      enableExceptionAutocapture: true,
     },
   },
   nitro: {

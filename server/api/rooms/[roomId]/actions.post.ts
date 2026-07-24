@@ -119,6 +119,22 @@ export default defineEventHandler(async (event) => {
       await db.batch([updateStory, clearSnapshots]);
     }
 
+    const phStopVote = useServerPostHog();
+    const phStopVoteSessionId = getHeader(event, "x-posthog-session-id");
+    const phStopVoteDistinctId = getHeader(event, "x-posthog-distinct-id") || user.id;
+    phStopVote.capture({
+      distinctId: phStopVoteDistinctId,
+      event: "server_vote_revealed",
+      properties: {
+        $session_id: phStopVoteSessionId,
+        room_id: roomId,
+        story_id: body.storyId,
+        vote_count: result.voteCount,
+        vote_average: result.average,
+      },
+    });
+    await phStopVote.flush();
+
     await syncRoomSession(event, roomId);
     return result;
   }
@@ -157,6 +173,22 @@ export default defineEventHandler(async (event) => {
   } else {
     await db.batch([updateStory, clearSnapshots]);
   }
+
+  const phComplete = useServerPostHog();
+  const phCompleteSessionId = getHeader(event, "x-posthog-session-id");
+  const phCompleteDistinctId = getHeader(event, "x-posthog-distinct-id") || user.id;
+  phComplete.capture({
+    distinctId: phCompleteDistinctId,
+    event: "server_story_completed",
+    properties: {
+      $session_id: phCompleteSessionId,
+      room_id: roomId,
+      story_id: body.storyId,
+      final_estimate: result.average,
+      vote_count: result.voteCount,
+    },
+  });
+  await phComplete.flush();
 
   await syncRoomSession(event, roomId);
   return result;

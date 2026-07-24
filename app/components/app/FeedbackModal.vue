@@ -3,6 +3,7 @@ import type { FormSubmitEvent } from '@nuxt/ui'
 import { z } from 'zod'
 
 const open = defineModel<boolean>({ required: true })
+const posthog = usePostHog()
 
 const feedbackKinds = [
   { label: 'An idea', value: 'idea' },
@@ -31,6 +32,7 @@ const feedback = reactive<FeedbackSchema>({
 })
 
 async function openFeedbackIssue(event: FormSubmitEvent<FeedbackSchema>) {
+  posthog?.capture("feedback_drafted", { kind: event.data.kind })
   const kind = feedbackKindLabels[event.data.kind]
   const params = new URLSearchParams({
     title: `[${kind}] ${event.data.title.trim()}`,

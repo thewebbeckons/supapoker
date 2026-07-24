@@ -15,6 +15,7 @@ export function useRoomVotes(
   isEnabled: Ref<boolean> = ref(true),
 ) {
   const { user } = useCurrentUser();
+  const posthog = usePostHog();
   const votes = realtime.votes;
   const selectedCard = ref<string | null>(null);
   let acceptedVote: string | null = null;
@@ -69,6 +70,7 @@ export function useRoomVotes(
 
     selectedCard.value = cardValue;
     setMyVisibleVote(cardValue);
+    posthog?.capture("vote_submitted", { room_id: toValue(roomId), story_id: story.id, card_value: cardValue });
     queuedVote = { storyId: story.id, value: cardValue };
     void flushVotes();
   }

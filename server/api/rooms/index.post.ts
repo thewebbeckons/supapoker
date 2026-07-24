@@ -103,6 +103,17 @@ export default defineEventHandler(async (event) => {
 
     const [room] = createdRooms;
     if (!room) throw createError({ statusCode: 500, message: "Unable to create room." });
+
+    const posthog = useServerPostHog();
+    const sessionId = getHeader(event, "x-posthog-session-id");
+    const distinctId = getHeader(event, "x-posthog-distinct-id") || user.id;
+    posthog.capture({
+      distinctId,
+      event: "server_room_created",
+      properties: { $session_id: sessionId, room_id: roomId, card_deck_id: body.cardDeckId, is_guest: true },
+    });
+    await posthog.flush();
+
     await syncRoomSession(event, roomId);
     setResponseStatus(event, 201);
     return mapRoom(room);
@@ -134,6 +145,16 @@ export default defineEventHandler(async (event) => {
   if (!room) {
     throw createError({ statusCode: 500, message: "Unable to create room." });
   }
+
+  const posthog = useServerPostHog();
+  const sessionId = getHeader(event, "x-posthog-session-id");
+  const distinctId = getHeader(event, "x-posthog-distinct-id") || user.id;
+  posthog.capture({
+    distinctId,
+    event: "server_room_created",
+    properties: { $session_id: sessionId, room_id: roomId, card_deck_id: body.cardDeckId, is_guest: false },
+  });
+  await posthog.flush();
 
   await syncRoomSession(event, roomId);
 

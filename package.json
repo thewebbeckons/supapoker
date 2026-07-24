@@ -19,6 +19,7 @@
   "dependencies": {
     "@nuxt/ui": "^4.8.2",
     "@nuxthub/core": "^0.10.7",
+    "@posthog/nuxt": "^1.7.80",
     "@vueuse/core": "^14.3.0",
     "@vueuse/nuxt": "^14.1.0",
     "better-auth": "^1.6.22",
@@ -27,6 +28,7 @@
     "image-meta": "^0.2.2",
     "nuxt": "^4.4.8",
     "nuxt-email-renderer": "^2.8.0",
+    "posthog-node": "^5.46.0",
     "vue": "latest",
     "vue-router": "latest",
     "zod": "^4.2.1"
