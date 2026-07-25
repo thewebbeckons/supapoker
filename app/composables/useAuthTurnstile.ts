@@ -19,10 +19,35 @@ export function useAuthTurnstile() {
     return token.value ? { "x-captcha-response": token.value } : {};
   }
 
+  /**
+   * Resolves true once a token exists. An invisible widget can still be in
+   * flight when the user submits, and there is nothing on screen to explain a
+   * disabled button, so those callers await this instead of gating submit.
+   * Resolves false if no token arrives in time.
+   */
+  function waitForToken(timeoutMs = 15_000) {
+    if (solved.value) return Promise.resolve(true);
+
+    return new Promise<boolean>((resolve) => {
+      let stop = () => {};
+      const timer = setTimeout(() => {
+        stop();
+        resolve(false);
+      }, timeoutMs);
+
+      stop = watch(token, (value) => {
+        if (!value) return;
+        clearTimeout(timer);
+        stop();
+        resolve(true);
+      });
+    });
+  }
+
   function reset() {
     token.value = "";
     widget.value?.reset();
   }
 
-  return { token, failed, siteKey, enabled, solved, headers, reset };
+  return { token, failed, siteKey, enabled, solved, headers, waitForToken, reset };
 }

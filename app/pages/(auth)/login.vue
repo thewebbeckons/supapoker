@@ -18,8 +18,8 @@ const {
   failed: turnstileFailed,
   siteKey: turnstileSiteKey,
   enabled: turnstileEnabled,
-  solved: turnstileSolved,
   headers: turnstileHeaders,
+  waitForToken: waitForTurnstile,
   reset: resetTurnstile,
 } = useAuthTurnstile();
 
@@ -39,10 +39,7 @@ const fields: AuthFormField[] = [{
   size: "lg",
 }];
 
-const submit = computed(() => ({
-  label: "Sign In",
-  disabled: !turnstileSolved.value,
-}));
+const submit = { label: "Sign In" };
 
 const schema = z.object({
   email: z.string({ message: "Please provide your email" }).email("Invalid email"),
@@ -72,6 +69,13 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
   loading.value = true;
 
   try {
+    // The widget here is invisible, so the token can still be in flight on
+    // submit. Wait for it rather than sending a request the server will reject.
+    if (!await waitForTurnstile()) {
+      turnstileFailed.value = true;
+      return;
+    }
+
     const result = await authClient.signIn.email({
       email: payload.data.email,
       password: payload.data.password,
@@ -148,11 +152,12 @@ watch(user, async () => {
             v-model="turnstileToken"
             :site-key="turnstileSiteKey"
             :action="AUTH_TURNSTILE_ACTION"
+            appearance="interaction-only"
             @error="turnstileFailed = true"
           />
         </ClientOnly>
         <p v-if="turnstileFailed" class="text-xs text-error-400">
-          The security check could not load. Please refresh and try again.
+          The security check could not be completed. Please refresh and try again.
         </p>
       </template>
     </UAuthForm>
@@ -169,5 +174,13 @@ watch(user, async () => {
     <div class="text-center text-sm text-neutral-400">
       Don't have an account? <NuxtLink :to="{ path: '/signup', query: { redirectTo: getQueryRedirectPath() || undefined } }" class="text-primary hover:underline">Sign up</NuxtLink>
     </div>
+
+    <!-- Required attribution: the widget above is invisible unless challenged. -->
+    <p v-if="turnstileEnabled" class="text-center text-xs text-neutral-500">
+      Protected by Cloudflare Turnstile —
+      <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener" class="hover:underline">Privacy</a>
+      and
+      <a href="https://www.cloudflare.com/website-terms/" target="_blank" rel="noopener" class="hover:underline">Terms</a>
+    </p>
   </div>
 </template>

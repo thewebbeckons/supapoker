@@ -41,7 +41,15 @@ function loadTurnstileScript() {
 </script>
 
 <script setup lang="ts">
-const props = defineProps<{ siteKey: string; action: string }>();
+const props = defineProps<{
+  siteKey: string;
+  action: string;
+  /**
+   * "interaction-only" keeps the widget invisible unless Cloudflare decides the
+   * visitor has to solve something. Verification is unchanged either way.
+   */
+  appearance?: "always" | "interaction-only";
+}>();
 const token = defineModel<string>({ default: "" });
 const emit = defineEmits<{ error: [] }>();
 const container = useTemplateRef<HTMLElement>("container");
@@ -61,6 +69,7 @@ async function renderWidget() {
       sitekey: props.siteKey,
       action: props.action,
       theme: "dark",
+      appearance: props.appearance ?? "always",
       callback: (value: string) => { token.value = value; },
       "expired-callback": () => { token.value = ""; },
       "error-callback": () => {
@@ -90,7 +99,8 @@ defineExpose({ reset });
 <template>
   <div
     ref="container"
-    class="cf-turnstile min-h-[65px]"
+    class="cf-turnstile"
+    :class="appearance === 'interaction-only' ? 'empty:hidden' : 'min-h-[65px]'"
     :data-sitekey="siteKey"
     :data-action="action"
   />
