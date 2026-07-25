@@ -59,6 +59,7 @@ export default defineNuxtConfig({
   },
   $production: {
     evlog: {
+      console: false,
       sampling: {
         rates: {
           debug: 0,
@@ -96,6 +97,10 @@ export default defineNuxtConfig({
     betterAuthSecret: requireEnv("BETTER_AUTH_SECRET"),
     githubClientId: requireEnv("GITHUB_CLIENT_ID"),
     githubClientSecret: requireEnv("GITHUB_CLIENT_SECRET"),
+    posthog: {
+      apiKey: "",
+      host: "",
+    },
     turnstileVerifierUrl: process.env.TURNSTILE_VERIFIER_URL || "",
     maintenanceSecret: process.env.MAINTENANCE_SECRET || "",
     emailFrom: process.env.EMAIL_FROM || "SupaPoker <noreply@example.com>",
