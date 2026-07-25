@@ -11,6 +11,15 @@ const toast = useToast();
 const submittedEmail = ref("");
 const { user } = useCurrentUser();
 const posthog = usePostHog();
+const {
+  token: turnstileToken,
+  failed: turnstileFailed,
+  siteKey: turnstileSiteKey,
+  enabled: turnstileEnabled,
+  solved: turnstileSolved,
+  headers: turnstileHeaders,
+  reset: resetTurnstile,
+} = useAuthTurnstile();
 
 function getPostAuthPath() {
   const redirectTo = route.query.redirectTo;
@@ -53,7 +62,11 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     password: payload.data.password,
     name: payload.data.name,
     callbackURL: getPostAuthPath(),
+    fetchOptions: { headers: turnstileHeaders() },
   });
+
+  // Turnstile tokens are single-use, so the widget is spent either way.
+  resetTurnstile();
 
   if (result.error) {
     toast.add({
@@ -142,7 +155,21 @@ onUnmounted(() => {
           </div>
         </UFormField>
 
-        <UButton type="submit" block label="Sign Up" color="primary" />
+        <ClientOnly>
+          <TurnstileWidget
+            v-if="turnstileEnabled"
+            ref="turnstileWidget"
+            v-model="turnstileToken"
+            :site-key="turnstileSiteKey"
+            :action="AUTH_TURNSTILE_ACTION"
+            @error="turnstileFailed = true"
+          />
+        </ClientOnly>
+        <p v-if="turnstileFailed" class="text-xs text-error-400">
+          The security check could not load. Please refresh and try again.
+        </p>
+
+        <UButton type="submit" block label="Sign Up" color="primary" :disabled="!turnstileSolved" />
       </UForm>
 
       <UButton label="Continue with GitHub" icon="i-lucide-github" color="neutral" variant="outline" block @click="signInWithGithub" />

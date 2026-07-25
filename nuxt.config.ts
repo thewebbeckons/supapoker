@@ -97,7 +97,7 @@ export default defineNuxtConfig({
     betterAuthSecret: requireEnv("BETTER_AUTH_SECRET"),
     githubClientId: requireEnv("GITHUB_CLIENT_ID"),
     githubClientSecret: requireEnv("GITHUB_CLIENT_SECRET"),
-    turnstileVerifierUrl: process.env.TURNSTILE_VERIFIER_URL || "",
+    turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY || "",
     maintenanceSecret: process.env.MAINTENANCE_SECRET || "",
     emailFrom: process.env.EMAIL_FROM || "SupaPoker <noreply@example.com>",
     public: {

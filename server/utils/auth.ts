@@ -1,10 +1,11 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { anonymous } from "better-auth/plugins";
+import { anonymous, captcha } from "better-auth/plugins";
 import { useLogger } from "evlog";
 import { toWebRequest, type H3Event } from "h3";
 import { db } from "hub:db";
 import * as schema from "../db/schema";
+import { AUTH_TURNSTILE_ACTION } from "~/utils/turnstile";
 
 function getRequestOrigin(event: H3Event) {
   const request = toWebRequest(event);
@@ -43,11 +44,43 @@ function getSiteUrl(event: H3Event) {
   return requestOrigin;
 }
 
+/**
+ * Endpoints that mint a user, a session, or an outbound email. Each one is an
+ * unbounded resource for an unauthenticated caller, so each requires a token.
+ */
+const CAPTCHA_ENDPOINTS = [
+  "/sign-up/email",
+  "/sign-in/email",
+  "/sign-in/anonymous",
+  "/request-password-reset",
+];
+
+/**
+ * Matches no real route, which disables the captcha plugin without dropping it
+ * from the `plugins` tuple — a conditional plugin list widens the array type and
+ * breaks better-auth's inference of the anonymous plugin's `isAnonymous` field.
+ */
+const CAPTCHA_DISABLED_ENDPOINTS = ["/__captcha-disabled"];
+
 export function createAuth(event: H3Event) {
   const config = useRuntimeConfig(event);
+  const siteUrl = getSiteUrl(event);
+  const turnstileSecretKey = getCloudflareEnv(event).TURNSTILE_SECRET_KEY
+    || config.turnstileSecretKey;
+
+  // Locally the captcha is skipped unless a secret is set, so dev works without
+  // Turnstile. Everywhere else it stays on: a missing secret then fails closed
+  // on the gated endpoints only, leaving session lookups working.
+  const captchaEnabled = Boolean(turnstileSecretKey) || !import.meta.dev;
+
+  if (!captchaEnabled) {
+    useLogger(event).warn("TURNSTILE_SECRET_KEY is not set; auth captcha is disabled.", {
+      operation: "auth.captcha.disabled",
+    });
+  }
 
   return betterAuth({
-    baseURL: `${getSiteUrl(event)}/api/auth`,
+    baseURL: `${siteUrl}/api/auth`,
     secret: config.betterAuthSecret,
     database: drizzleAdapter(db, {
       provider: "sqlite",
@@ -95,6 +128,13 @@ export function createAuth(event: H3Event) {
       },
     },
     plugins: [
+      captcha({
+        provider: "cloudflare-turnstile",
+        secretKey: turnstileSecretKey,
+        endpoints: captchaEnabled ? CAPTCHA_ENDPOINTS : CAPTCHA_DISABLED_ENDPOINTS,
+        expectedAction: AUTH_TURNSTILE_ACTION,
+        allowedHostnames: [new URL(siteUrl).hostname],
+      }),
       anonymous({
         generateName: () => "Guest",
         onLinkAccount: async ({ anonymousUser, newUser }) => {
@@ -106,7 +146,22 @@ export function createAuth(event: H3Event) {
         },
       }),
     ],
-    trustedOrigins: [getSiteUrl(event)],
+    // The default "memory" store is per-isolate on Workers, so it barely
+    // constrains a distributed caller. D1 gives every isolate one shared window.
+    rateLimit: {
+      enabled: true,
+      storage: "database",
+    },
+    advanced: {
+      ipAddress: {
+        // Default is x-forwarded-for, which Cloudflare may pass as a multi-hop
+        // chain; better-auth refuses to trust those and buckets every caller
+        // under a single "no-trusted-ip" key. cf-connecting-ip is single-valued
+        // and set by the edge, overwriting anything the client sends.
+        ipAddressHeaders: ["cf-connecting-ip"],
+      },
+    },
+    trustedOrigins: [siteUrl],
   });
 }
 

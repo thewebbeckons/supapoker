@@ -13,6 +13,15 @@ const authForm = useTemplateRef<{ state: { password?: string } }>("authForm");
 const hasRedirected = ref(false);
 const { user, refresh } = useCurrentUser();
 const posthog = usePostHog();
+const {
+  token: turnstileToken,
+  failed: turnstileFailed,
+  siteKey: turnstileSiteKey,
+  enabled: turnstileEnabled,
+  solved: turnstileSolved,
+  headers: turnstileHeaders,
+  reset: resetTurnstile,
+} = useAuthTurnstile();
 
 const fields: AuthFormField[] = [{
   name: "email",
@@ -32,6 +41,7 @@ const fields: AuthFormField[] = [{
 
 const submit = computed(() => ({
   label: "Sign In",
+  disabled: !turnstileSolved.value,
 }));
 
 const schema = z.object({
@@ -66,6 +76,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
       email: payload.data.email,
       password: payload.data.password,
       callbackURL: getPostAuthPath(),
+      fetchOptions: { headers: turnstileHeaders() },
     });
 
     if (result.error) {
@@ -91,6 +102,8 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     });
   } finally {
     loading.value = false;
+    // Turnstile tokens are single-use, so the widget is spent either way.
+    resetTurnstile();
   }
 }
 
@@ -125,6 +138,22 @@ watch(user, async () => {
     >
       <template #password-hint>
         <ULink to="/forgot-password" class="text-primary font-medium" tabindex="-1">Forgot password?</ULink>
+      </template>
+
+      <template #validation>
+        <ClientOnly>
+          <TurnstileWidget
+            v-if="turnstileEnabled"
+            ref="turnstileWidget"
+            v-model="turnstileToken"
+            :site-key="turnstileSiteKey"
+            :action="AUTH_TURNSTILE_ACTION"
+            @error="turnstileFailed = true"
+          />
+        </ClientOnly>
+        <p v-if="turnstileFailed" class="text-xs text-error-400">
+          The security check could not load. Please refresh and try again.
+        </p>
       </template>
     </UAuthForm>
 

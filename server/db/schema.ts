@@ -73,6 +73,19 @@ export const verification = sqliteTable(
   }),
 );
 
+export const rateLimit = sqliteTable(
+  "rateLimit",
+  {
+    id: text("id").primaryKey(),
+    key: text("key").notNull(),
+    count: integer("count").notNull(),
+    lastRequest: integer("lastRequest").notNull(),
+  },
+  table => ({
+    keyIdx: uniqueIndex("rate_limit_key_idx").on(table.key),
+  }),
+);
+
 export const profiles = sqliteTable("profiles", {
   userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
