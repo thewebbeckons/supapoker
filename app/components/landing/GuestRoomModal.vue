@@ -3,26 +3,35 @@ import type { Room } from "~/types/room";
 
 const open = defineModel<boolean>({ default: false });
 const { user, guestRoomId, refresh } = useCurrentUser();
-const config = useRuntimeConfig();
 const posthog = usePostHog();
 const toast = useToast();
 const step = ref<1 | 2>(1);
 const name = ref("");
 const description = ref("");
 const displayName = ref("");
-const turnstileToken = ref("");
 const isCreating = ref(false);
-const turnstileFailed = ref(false);
-const turnstile = useTemplateRef<{ reset: () => void }>("turnstile");
+const {
+  token: turnstileToken,
+  failed: turnstileFailed,
+  siteKey: turnstileSiteKey,
+  enabled: turnstileEnabled,
+  solved: turnstileSolved,
+  headers: turnstileHeaders,
+  reset: resetTurnstile,
+} = useAuthTurnstile();
 
 const isReturningGuest = computed(() => Boolean(user.value?.isAnonymous && guestRoomId.value));
 const authRedirect = computed(() => guestRoomId.value ? `/rooms/${guestRoomId.value}` : "/");
 const loginLink = computed(() => ({ path: "/login", query: { redirectTo: authRedirect.value } }));
 const signupLink = computed(() => ({ path: "/signup", query: { redirectTo: authRedirect.value } }));
 const canContinue = computed(() => name.value.trim().length > 0);
+
+// The challenge guards the anonymous *session*, which is the unbounded resource.
+// Callers who already hold a session cleared it when that session was created.
+const needsChallenge = computed(() => !user.value);
 const canCreate = computed(() => {
   if (isCreating.value || displayName.value.trim().length < 2) return false;
-  return Boolean(user.value && !user.value.isAnonymous) || Boolean(turnstileToken.value);
+  return !needsChallenge.value || turnstileSolved.value;
 });
 
 watch(open, (value) => {
@@ -31,8 +40,8 @@ watch(open, (value) => {
   displayName.value = user.value?.isAnonymous && user.value.name !== "Guest"
     ? user.value.name
     : "";
-  turnstileToken.value = "";
   turnstileFailed.value = false;
+  resetTurnstile();
 });
 
 async function createRoom() {
@@ -41,7 +50,10 @@ async function createRoom() {
 
   try {
     if (!user.value) {
-      const result = await authClient.signIn.anonymous();
+      const result = await authClient.signIn.anonymous({
+        fetchOptions: { headers: turnstileHeaders() },
+      });
+      resetTurnstile();
       if (result.error) throw new Error(result.error.message || "Unable to start a guest session.");
       await refresh();
     }
@@ -52,7 +64,6 @@ async function createRoom() {
         name: name.value,
         description: description.value || null,
         displayName: displayName.value,
-        turnstileToken: turnstileToken.value,
       },
     });
     posthog?.capture("guest_room_created");
@@ -60,7 +71,7 @@ async function createRoom() {
     open.value = false;
     await navigateTo(`/rooms/${room.id}`);
   } catch (error: any) {
-    turnstile.value?.reset();
+    resetTurnstile();
     const roomId = error?.data?.data?.roomId ?? error?.data?.roomId;
     if (roomId) {
       await refresh();
@@ -128,13 +139,13 @@ async function createRoom() {
         </UFormField>
         <ClientOnly>
           <TurnstileWidget
-            v-if="config.public.turnstileSiteKey"
-            ref="turnstile"
+            v-if="needsChallenge && turnstileEnabled"
+            ref="turnstileWidget"
             v-model="turnstileToken"
-            :site-key="config.public.turnstileSiteKey"
+            :site-key="turnstileSiteKey"
+            :action="AUTH_TURNSTILE_ACTION"
             @error="turnstileFailed = true"
           />
-          <p v-else class="text-sm text-warning-400">Guest room creation is not configured yet.</p>
         </ClientOnly>
         <p v-if="turnstileFailed" class="text-xs text-error-400">The security check could not load. Please try again.</p>
         <div class="flex items-center justify-between gap-3">

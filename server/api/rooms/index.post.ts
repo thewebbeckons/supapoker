@@ -14,7 +14,6 @@ const createRoomSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().max(500).nullable().optional(),
   displayName: z.string().trim().min(2).max(80).optional(),
-  turnstileToken: z.string().min(1).optional(),
   cardDeckId: z.enum(CARD_DECK_IDS).default(DEFAULT_CARD_DECK_ID),
   cardValues: z.array(z.string().trim().min(1).max(MAX_CARD_VALUE_LENGTH))
     .min(MIN_CARD_VALUES)
@@ -53,15 +52,9 @@ export default defineEventHandler(async (event) => {
     if (!displayName) {
       throw createError({ statusCode: 400, message: "Display name is required." });
     }
-    if (!body.turnstileToken) {
-      throw createError({
-        statusCode: 403,
-        message: "Please complete the security check.",
-        data: { code: "TURNSTILE_FAILED" },
-      });
-    }
-    await verifyGuestRoomCreation(event, body.turnstileToken);
-
+    // No Turnstile check here: the anonymous session this caller holds was
+    // itself gated by Turnstile at /sign-in/anonymous, and the ownership row
+    // below caps guests at one active room.
     let createdRooms: (typeof schema.rooms.$inferSelect)[];
     try {
       const results = await db.batch([

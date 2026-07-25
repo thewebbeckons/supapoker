@@ -41,7 +41,7 @@ function loadTurnstileScript() {
 </script>
 
 <script setup lang="ts">
-const props = defineProps<{ siteKey: string }>();
+const props = defineProps<{ siteKey: string; action: string }>();
 const token = defineModel<string>({ default: "" });
 const emit = defineEmits<{ error: [] }>();
 const container = useTemplateRef<HTMLElement>("container");
@@ -59,7 +59,7 @@ async function renderWidget() {
     if (!api || !container.value) throw new Error("Turnstile is unavailable");
     widgetId = api.render(container.value, {
       sitekey: props.siteKey,
-      action: "turnstile-spin-v1",
+      action: props.action,
       theme: "dark",
       callback: (value: string) => { token.value = value; },
       "expired-callback": () => { token.value = ""; },
@@ -92,6 +92,6 @@ defineExpose({ reset });
     ref="container"
     class="cf-turnstile min-h-[65px]"
     :data-sitekey="siteKey"
-    data-action="turnstile-spin-v1"
+    :data-action="action"
   />
 </template>
