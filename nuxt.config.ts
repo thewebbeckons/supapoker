@@ -60,12 +60,12 @@ export default defineNuxtConfig({
   },
   $production: {
     evlog: {
+      // Browser-only: suppresses client logs in devtools. Server output stays on
+      // so Workers Logs keeps a fallback view if the PostHog drain fails.
+      console: false,
       sampling: {
         rates: {
           debug: 0,
-          info: 10,
-          warn: 50,
-          error: 100,
         },
         keep: [
           { status: 400 },
@@ -97,6 +97,10 @@ export default defineNuxtConfig({
     betterAuthSecret: requireEnv("BETTER_AUTH_SECRET"),
     githubClientId: requireEnv("GITHUB_CLIENT_ID"),
     githubClientSecret: requireEnv("GITHUB_CLIENT_SECRET"),
+    posthog: {
+      apiKey: "",
+      host: "https://us.i.posthog.com",
+    },
     turnstileSecretKey: process.env.TURNSTILE_SECRET_KEY || "",
     maintenanceSecret: process.env.MAINTENANCE_SECRET || "",
     emailFrom: process.env.EMAIL_FROM || "SupaPoker <noreply@example.com>",
