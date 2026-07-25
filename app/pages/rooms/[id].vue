@@ -203,6 +203,11 @@ watch(lastPokeId, (value) => {
     pokeBurstKey.value += 1;
 });
 
+function handlePokeUsers() {
+    posthog?.capture("poke_team_clicked", { room_id: roomId.value });
+    pokeUsers();
+}
+
 const transferCandidates = computed<TransferCandidate[]>(() =>
     players.value
         .filter((player) => player.id !== currentRoomCreatorId.value && !player.isAnonymous)
@@ -524,7 +529,7 @@ watch(stories, (nextStories) => {
                 :votes="votes"
                 :connection-status="connectionStatus"
                 :can-poke="canEdit"
-                @poke-users="pokeUsers"
+                @poke-users="handlePokeUsers"
             />
         </div>
 
