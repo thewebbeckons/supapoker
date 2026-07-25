@@ -57,16 +57,19 @@ const { passwordStrength, strengthScore, strengthColor } = usePasswordStrength(t
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
   submittedEmail.value = "";
 
-  const result = await authClient.signUp.email({
-    email: payload.data.email,
-    password: payload.data.password,
-    name: payload.data.name,
-    callbackURL: getPostAuthPath(),
-    fetchOptions: { headers: turnstileHeaders() },
-  });
-
-  // Turnstile tokens are single-use, so the widget is spent either way.
-  resetTurnstile();
+  let result: Awaited<ReturnType<typeof authClient.signUp.email>>;
+  try {
+    result = await authClient.signUp.email({
+      email: payload.data.email,
+      password: payload.data.password,
+      name: payload.data.name,
+      callbackURL: getPostAuthPath(),
+      fetchOptions: { headers: turnstileHeaders() },
+    });
+  } finally {
+    // Turnstile tokens are single-use, so the widget is spent either way.
+    resetTurnstile();
+  }
 
   if (result.error) {
     toast.add({
