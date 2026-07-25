@@ -32,6 +32,10 @@
 		"EMAIL_FROM": "SupaPoker <noreply@supapoker.dev>",
 		"NUXT_PUBLIC_POSTHOG_PROJECT_TOKEN": "phc_t79D8ei55hujfXtZSbAUCt7ifMwMLr6Y5J8KYtZmELXC",
 		"NUXT_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
+		// Server-side evlog drain. PostHog Logs authenticates with the project
+		// token, so this is the same public value as the token above.
+		"NUXT_POSTHOG_API_KEY": "phc_t79D8ei55hujfXtZSbAUCt7ifMwMLr6Y5J8KYtZmELXC",
+		"NUXT_POSTHOG_HOST": "https://us.i.posthog.com",
 		"NUXT_PUBLIC_TURNSTILE_SITE_KEY": "0x4AAAAAAD9x4R-ooXziLQkM",
 	},
 	"observability": {
