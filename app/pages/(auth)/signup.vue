@@ -11,6 +11,7 @@ const toast = useToast();
 const submittedEmail = ref("");
 const { user } = useCurrentUser();
 const posthog = usePostHog();
+const { pending: githubPending, signInWithGithub } = useGithubSignIn("signup");
 const {
   token: turnstileToken,
   failed: turnstileFailed,
@@ -91,14 +92,6 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
   });
 }
 
-async function signInWithGithub() {
-  posthog?.capture("github_login_initiated", { page: "signup" });
-  await authClient.signIn.social({
-    provider: "github",
-    callbackURL: getPostAuthPath(),
-  });
-}
-
 onUnmounted(() => {
   state.name = "";
   state.email = "";
@@ -134,7 +127,7 @@ onUnmounted(() => {
         <p class="text-neutral-400">Create a new account to get started.</p>
       </div>
 
-      <UForm :schema="schema" :state="state" class="flex flex-col gap-4" @submit="onSubmit">
+      <UForm v-slot="{ loading }" :schema="schema" :state="state" class="flex flex-col gap-4" @submit="onSubmit">
         <UFormField label="Name" name="name" required>
           <UInput v-model="state.name" size="lg" placeholder="Enter your name" icon="i-lucide-user" class="w-full" />
         </UFormField>
@@ -172,10 +165,25 @@ onUnmounted(() => {
           The security check could not load. Please refresh and try again.
         </p>
 
-        <UButton type="submit" block label="Sign Up" color="primary" :disabled="!turnstileSolved" />
+        <UButton
+          type="submit"
+          block
+          :label="loading ? 'Dealing you in…' : 'Sign Up'"
+          color="primary"
+          :loading="loading"
+          :disabled="!turnstileSolved || loading"
+        />
       </UForm>
 
-      <UButton label="Continue with GitHub" icon="i-lucide-github" color="neutral" variant="outline" block @click="signInWithGithub" />
+      <UButton
+        :label="githubPending ? 'Off to GitHub…' : 'Continue with GitHub'"
+        icon="i-lucide-github"
+        color="neutral"
+        variant="outline"
+        block
+        :loading="githubPending"
+        @click="signInWithGithub(getPostAuthPath())"
+      />
 
       <div class="text-center text-sm text-neutral-400">
         Already have an account? <NuxtLink :to="{ path: '/login', query: { redirectTo: getPostAuthPath() } }" class="text-primary hover:underline">Login</NuxtLink>

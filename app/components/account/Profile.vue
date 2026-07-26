@@ -77,7 +77,7 @@ function onAvatarUpdate(url: string | null) {
       <p class="text-sm text-neutral-500">Update your personal information</p>
     </template>
 
-    <UForm :schema="profileSchema" :state="profileState" @submit="onProfileSubmit" class="text-sm space-y-4">
+    <UForm v-slot="{ loading }" :schema="profileSchema" :state="profileState" @submit="onProfileSubmit" class="text-sm space-y-4">
       <UFormField name="name" label="Name" description="What you want others to call you." required class="flex max-sm:flex-col justify-between items-start gap-4">
         <UInput v-model="profileState.name" autocomplete="off" trailing-icon="i-lucide-user" />
       </UFormField>
@@ -90,7 +90,13 @@ function onAvatarUpdate(url: string | null) {
         <AccountAvatarUpload :model-value="avatarUrl" @update:model-value="onAvatarUpdate" :name="profileState.name" />
       </UFormField>
       <div class="flex justify-end pt-4">
-        <UButton type="submit" label="Save changes" color="neutral" variant="solid" />
+        <UButton
+          type="submit"
+          :label="loading ? 'Making it official…' : 'Save changes'"
+          :loading="loading"
+          color="neutral"
+          variant="solid"
+        />
       </div>
     </UForm>
   </UCard>

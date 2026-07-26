@@ -66,6 +66,7 @@ async function openFeedbackIssue(event: FormSubmitEvent<FeedbackSchema>) {
   >
     <template #body>
       <UForm
+        v-slot="{ loading }"
         :schema="feedbackSchema"
         :state="feedback"
         class="feedback-form"
@@ -111,8 +112,9 @@ async function openFeedbackIssue(event: FormSubmitEvent<FeedbackSchema>) {
             color="primary"
             trailing-icon="i-lucide-arrow-up-right"
             class="submit-button"
+            :loading="loading"
           >
-            Draft the issue
+            {{ loading ? 'Off to GitHub…' : 'Draft the issue' }}
           </UButton>
         </div>
       </UForm>

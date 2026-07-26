@@ -36,6 +36,11 @@ type Schema = z.output<typeof schema>;
 
 const loading = ref(false);
 
+const submit = computed(() => ({
+  label: loading.value ? "Off to your inbox…" : "Continue",
+  disabled: !turnstileSolved.value,
+}));
+
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
   loading.value = true;
 
@@ -92,7 +97,7 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
       :fields="fields"
       :schema="schema"
       :loading="loading"
-      :submit="{ disabled: !turnstileSolved }"
+      :submit="submit"
       @submit="onSubmit"
     >
       <template #validation>
