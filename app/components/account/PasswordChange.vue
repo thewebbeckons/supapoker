@@ -44,7 +44,7 @@ async function onPasswordSubmit(payload: FormSubmitEvent<PasswordSchema>) {
       <p class="text-sm text-neutral-500">Update your password</p>
     </template>
 
-    <UForm :schema="changePasswordSchema" :state="passwordState" class="space-y-4" @submit="onPasswordSubmit">
+    <UForm v-slot="{ loading }" :schema="changePasswordSchema" :state="passwordState" class="space-y-4" @submit="onPasswordSubmit">
       <UFormField label="Current Password" name="currentPassword">
         <UInput v-model="passwordState.currentPassword" type="password" icon="i-lucide-lock" />
       </UFormField>
@@ -73,7 +73,13 @@ async function onPasswordSubmit(payload: FormSubmitEvent<PasswordSchema>) {
       </UFormField>
 
       <div class="flex justify-end">
-        <UButton type="submit" label="Update Password" color="neutral" variant="soft" />
+        <UButton
+          type="submit"
+          :label="loading ? 'Locking it down…' : 'Update Password'"
+          :loading="loading"
+          color="neutral"
+          variant="soft"
+        />
       </div>
     </UForm>
   </UCard>

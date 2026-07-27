@@ -13,6 +13,7 @@ const authForm = useTemplateRef<{ state: { password?: string } }>("authForm");
 const hasRedirected = ref(false);
 const { user, refresh } = useCurrentUser();
 const posthog = usePostHog();
+const { pending: githubPending, signInWithGithub } = useGithubSignIn("login");
 const {
   token: turnstileToken,
   failed: turnstileFailed,
@@ -39,7 +40,7 @@ const fields: AuthFormField[] = [{
   size: "lg",
 }];
 
-const submit = { label: "Sign In" };
+const submit = computed(() => ({ label: loading.value ? "Shuffling the deck…" : "Sign In" }));
 
 const schema = z.object({
   email: z.string({ message: "Please provide your email" }).email("Invalid email"),
@@ -111,14 +112,6 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
   }
 }
 
-async function signInWithGithub() {
-  posthog?.capture("github_login_initiated", { page: "login" });
-  await authClient.signIn.social({
-    provider: "github",
-    callbackURL: getPostAuthPath(),
-  });
-}
-
 watch(user, async () => {
   if (user.value && !user.value.isAnonymous && !hasRedirected.value) {
     hasRedirected.value = true;
@@ -163,12 +156,13 @@ watch(user, async () => {
     </UAuthForm>
 
     <UButton
-      label="Continue with GitHub"
+      :label="githubPending ? 'Off to GitHub…' : 'Continue with GitHub'"
       icon="i-lucide-github"
       color="neutral"
       variant="outline"
       block
-      @click="signInWithGithub"
+      :loading="githubPending"
+      @click="signInWithGithub(getPostAuthPath())"
     />
 
     <div class="text-center text-sm text-neutral-400">
