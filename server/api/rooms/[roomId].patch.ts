@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db, schema } from "hub:db";
 import { z } from "zod";
 
@@ -6,6 +6,7 @@ const updateRoomSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   description: z.string().max(500).nullable().optional(),
   adminUserId: z.string().min(1).optional(),
+  mode: z.enum(["realtime", "async"]).optional(),
 });
 
 export default defineEventHandler(async (event) => {
@@ -13,11 +14,32 @@ export default defineEventHandler(async (event) => {
   const roomId = getRouterParam(event, "roomId");
   if (!roomId) throw createError({ statusCode: 400, message: "Room ID is required." });
 
-  await requireRoomAdmin(roomId, user.id);
+  const existingRoom = await requireRoomAdmin(roomId, user.id);
   const body = await readValidatedBody(event, updateRoomSchema.parse);
   const transferTarget = body.adminUserId && body.adminUserId !== user.id
     ? body.adminUserId
     : undefined;
+  const nextMode = body.mode && body.mode !== existingRoom.mode ? body.mode : undefined;
+
+  if (nextMode) {
+    // Switching modes mid-flight would mean either collapsing several open
+    // async stories into the single realtime slot, or inventing an expected
+    // voter roster for a story that is already open. Requiring a quiet room
+    // keeps this a pure metadata write with no vote state to migrate.
+    const inFlight = await db.query.stories.findFirst({
+      where: and(
+        eq(schema.stories.roomId, roomId),
+        inArray(schema.stories.status, ["active", "voting", "voted"]),
+      ),
+    });
+    if (inFlight) {
+      throw createError({
+        statusCode: 400,
+        message: "Finish or reset the story in progress before changing room mode.",
+        data: { code: "ROOM_MODE_BUSY" },
+      });
+    }
+  }
 
   if (transferTarget) {
     const canTransfer = await isRoomParticipant(roomId, transferTarget);
@@ -42,6 +64,7 @@ export default defineEventHandler(async (event) => {
       ...(body.name !== undefined ? { name: body.name.trim() } : {}),
       ...(body.description !== undefined ? { description: body.description?.trim() || null } : {}),
       ...(transferTarget ? { adminUserId: transferTarget } : {}),
+      ...(nextMode ? { mode: nextMode } : {}),
       updatedAt: new Date(),
     })
     .where(eq(schema.rooms.id, roomId))

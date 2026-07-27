@@ -167,3 +167,32 @@ test("the client parser accepts typed snapshots and rejects malformed frames", (
     votes: { "user-1": 8 },
   })), null);
 });
+
+test("an unrecognised story status invalidates the entire snapshot", () => {
+  // STORY_STATUSES is a closed set, so one unknown story nulls the whole frame,
+  // and applyMessage drops a null with no error, no toast and no reconnect. A
+  // tab left open across such a deploy would silently freeze. Never add a value
+  // to stories.status — model new states as separate fields instead.
+  assert.equal(parseRoomRealtimeMessage(JSON.stringify({
+    type: "snapshot",
+    revision: 8,
+    room,
+    stories: [story, { ...story, id: "story-2", status: "needs_resolution" }],
+    players,
+    votes: {},
+  })), null);
+});
+
+test("unknown fields are tolerated so old clients survive newer servers", () => {
+  const snapshot = parseRoomRealtimeMessage(JSON.stringify({
+    type: "snapshot",
+    revision: 9,
+    room: { ...room, mode: "async" },
+    stories: [{ ...story, needsResolution: true }],
+    players,
+    votes: {},
+    storyVotes: { "story-1": {} },
+  }));
+
+  assert.equal(snapshot?.type, "snapshot");
+});

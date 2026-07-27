@@ -16,6 +16,7 @@ import {
   votesForViewer,
 } from "~/utils/room-realtime";
 import { DEFAULT_CARD_VALUES, isCardDeckVote } from "~/utils/card-decks";
+import { consensusValue, summarizeVotes } from "~/utils/async-voting";
 
 interface Env {}
 
@@ -49,31 +50,6 @@ function parseState(value: string | null | undefined): RoomRealtimeState {
   } catch {
     return emptyState();
   }
-}
-
-function numericVote(value: string) {
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
-}
-
-function summarizeVotes(votes: VotesMap) {
-  const voteCount = Object.keys(votes).length;
-  const numericValues = Object.values(votes)
-    .map(numericVote)
-    .filter((value): value is number => value !== null);
-
-  if (numericValues.length === 0) {
-    return {
-      average: null,
-      voteCount,
-    };
-  }
-
-  const total = numericValues.reduce((sum, value) => sum + value, 0);
-  return {
-    average: Number((total / numericValues.length).toFixed(2)),
-    voteCount,
-  };
 }
 
 export class RoomSession extends DurableObject<Env> {
@@ -194,19 +170,31 @@ export class RoomSession extends DurableObject<Env> {
 
   async getVoteResult(storyId: string) {
     this.assertActive();
-    const revealedVotes = this.readRevealedVotes(storyId);
-    const votes = Object.keys(revealedVotes).length > 0 ? revealedVotes : this.readVotes(storyId);
+    const votes = this.readFrozenVotes(storyId);
 
     return {
       votes,
+      consensus: consensusValue(votes),
       ...summarizeVotes(votes),
     };
   }
 
-  async revealVotes(storyId: string) {
+  /**
+   * Closes voting and freezes the result. Idempotent: when voting is already
+   * closed it returns the frozen result instead of throwing, so a retry or a
+   * second racing caller can never strand a story in `voting` with the Durable
+   * Object refusing both further votes and any reveal.
+   */
+  async finalizeVoting(storyId: string) {
     this.assertActive();
+
     if (this.isVotingClosed(storyId)) {
-      throw new Error("Voting is already closed for this story.");
+      const frozenVotes = this.readFrozenVotes(storyId);
+      return {
+        votes: frozenVotes,
+        consensus: consensusValue(frozenVotes),
+        ...summarizeVotes(frozenVotes),
+      };
     }
 
     const story = this.readState().stories.find(candidate => candidate.id === storyId);
@@ -228,11 +216,25 @@ export class RoomSession extends DurableObject<Env> {
 
     return {
       votes,
+      consensus: consensusValue(votes),
       ...summarizeVotes(votes),
     };
   }
 
-  async submitVote(storyId: string, userId: string, voteValue: string) {
+  /**
+   * `expectedVoterIds` is supplied by async rooms and comes from D1, never from
+   * Durable Object storage, which is wiped when a room is deleted. When the last
+   * expected voter votes, this latches voting closed inside the same RPC call
+   * and reports `shouldFinalize`. A Durable Object handles one call at a time and
+   * the latch is checked before it is set, so exactly one caller can win the race
+   * and exactly one request goes on to write the result to D1.
+   */
+  async submitVote(
+    storyId: string,
+    userId: string,
+    voteValue: string,
+    expectedVoterIds?: string[],
+  ) {
     this.assertActive();
     const cardValues = this.readState().room?.cardValues ?? DEFAULT_CARD_VALUES;
     if (!isCardDeckVote(voteValue, cardValues)) {
@@ -255,8 +257,53 @@ export class RoomSession extends DurableObject<Env> {
       voteValue,
     );
 
+    const progress = expectedVoterIds
+      ? voteProgress(expectedVoterIds, Object.keys(this.readVotes(storyId)))
+      : null;
+    const shouldFinalize = Boolean(progress && progress.expected > 0 && progress.voted >= progress.expected);
+    if (shouldFinalize) this.markVotingClosed(storyId);
+
     this.broadcastVotes(storyId);
-    return { ok: true };
+    return {
+      ok: true as const,
+      voted: progress?.voted ?? 0,
+      expected: progress?.expected ?? 0,
+      shouldFinalize,
+    };
+  }
+
+  /** Counts and voter ids per story. Never returns vote values. */
+  async getVoteProgress(
+    entries: { storyId: string; expectedVoterIds: string[] }[],
+  ): Promise<Record<string, StoryVoteProgress>> {
+    this.assertActive();
+
+    const result: Record<string, StoryVoteProgress> = {};
+    for (const entry of entries) {
+      const voterIds = Object.keys(this.readVotes(entry.storyId));
+      const progress = voteProgress(entry.expectedVoterIds, voterIds);
+      result[entry.storyId] = {
+        voted: progress.voted,
+        expected: progress.expected,
+        voterIds,
+      };
+    }
+    return result;
+  }
+
+  /**
+   * One viewer's own card on each story, for the HTTP snapshot path. Async rooms
+   * are usually cold, so the page load cannot rely on a live socket.
+   */
+  async getViewerVotes(viewerId: string, storyIds: string[]): Promise<Record<string, string>> {
+    this.assertActive();
+
+    const result: Record<string, string> = {};
+    for (const storyId of storyIds) {
+      const vote = this.readVotes(storyId)[viewerId];
+      if (vote !== undefined) result[storyId] = vote;
+    }
+    return result;
   }
 
   async transferUserIdentity(fromUserId: string, toUserId: string): Promise<void> {
@@ -460,6 +507,15 @@ export class RoomSession extends DurableObject<Env> {
       .toArray();
 
     return Object.fromEntries(rows.map(row => [row.user_id, row.vote_value]));
+  }
+
+  /**
+   * The authoritative result for a story: the frozen reveal when one exists,
+   * otherwise whatever is still live.
+   */
+  private readFrozenVotes(storyId: string): VotesMap {
+    const revealedVotes = this.readRevealedVotes(storyId);
+    return Object.keys(revealedVotes).length > 0 ? revealedVotes : this.readVotes(storyId);
   }
 
   private buildVotesMessage(
