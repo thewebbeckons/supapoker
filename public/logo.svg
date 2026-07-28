@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title" shape-rendering="crispEdges">
+  <title>SupaPoker card</title>
+  <rect width="64" height="64" fill="#09090b"/>
+  <path fill="#27272a" d="M0 0h64v4H0zM0 60h64v4H0zM0 4h4v56H0zM60 4h4v56h-4z"/>
+  <path fill="#f5f5f7" d="M16 8h32v48H16z"/>
+  <path fill="#101014" d="M20 12h24v40H20z"/>
+  <path fill="#3b82f6" d="M20 12h8v4h-8zM36 48h8v4h-8zM20 20h8v4h8v-4h8v4h4v8h-4v4h-4v4h-4v4h-8v-4h-4v-4h-4v-4h-4v-8h4z"/>
+</svg>

@@ -76,7 +76,7 @@
 				:style="landing ? { color: '#f4f4f5' } : undefined"
 			>
 				<img
-					src="/logo-pixel-dark.svg"
+					src="/logo.svg"
 					alt="SupaPoker Logo"
 					class="h-8 w-8"
 				/>

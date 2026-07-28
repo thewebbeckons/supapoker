@@ -76,7 +76,7 @@ useSeoMeta({
   <main class="concept-lab">
     <header class="lab-header">
       <NuxtLink to="/" class="lab-brand" aria-label="Back to SupaPoker landing page">
-        <img src="/logo-pixel-dark.svg" alt="">
+        <img src="/logo.svg" alt="">
         <span>SupaPoker</span>
       </NuxtLink>
       <span class="lab-title">Hero explorations</span>
