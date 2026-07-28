@@ -74,7 +74,9 @@ function isStoryVotesRecord(value: unknown): value is Record<string, VotesMap> {
 function isStoryVoteProgress(value: unknown): value is StoryVoteProgress {
   if (!isRecord(value)) return false;
   return typeof value.voted === "number"
+    && Number.isSafeInteger(value.voted)
     && typeof value.expected === "number"
+    && Number.isSafeInteger(value.expected)
     && Array.isArray(value.voterIds)
     && value.voterIds.every(id => typeof id === "string");
 }

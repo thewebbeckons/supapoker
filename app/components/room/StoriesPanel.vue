@@ -102,10 +102,12 @@ function statusIcon(status: Story['status']) {
                 <div v-for="story in visibleStories" :key="story.id" class="story-row" :class="{ current: ['active', 'voting', 'voted'].includes(story.status) }">
                     <UIcon :name="statusIcon(story.status)" class="story-icon" />
                     <span class="story-title">{{ story.title }}</span>
-                    <span v-if="story.status === 'completed' && estimateLabel(story)" class="story-estimate">
-                        {{ estimateLabel(story) }}
+                    <span class="story-meta">
+                        <span v-if="story.status === 'completed' && estimateLabel(story)" class="story-estimate">
+                            {{ estimateLabel(story) }}
+                        </span>
+                        <span class="story-status">{{ story.status }}</span>
                     </span>
-                    <span class="story-status">{{ story.status }}</span>
                     <div class="story-actions">
                         <UTooltip v-if="canManage && !['active', 'voting', 'voted', 'completed'].includes(story.status)" text="Set active">
                             <UButton icon="i-lucide-play" color="neutral" variant="ghost" size="xs" aria-label="Set active" @click="emit('set-active', story)" />
@@ -144,7 +146,10 @@ function statusIcon(status: Story['status']) {
 .current .story-icon, .current .story-status { color: #3b82f6; }
 .story-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .story-status { color: #a1a1aa; font-size: 0.63rem; letter-spacing: 0.12em; text-transform: uppercase; }
-.story-estimate { padding: 0.1rem 0.4rem; border: 1px solid rgba(96, 165, 250, 0.35); color: #93c5fd; font-size: 0.68rem; }
+/* Keeps the estimate inside the existing status cell so the row stays a
+   four-column grid on desktop and three on mobile. */
+.story-meta { display: flex; align-items: center; justify-content: flex-end; gap: 0.5rem; min-width: 0; }
+.story-estimate { padding: 0.1rem 0.4rem; border: 1px solid rgba(96, 165, 250, 0.35); color: #93c5fd; font-size: 0.68rem; white-space: nowrap; }
 .story-actions { display: flex; min-width: 5.5rem; justify-content: flex-end; opacity: 0.38; transition: opacity 160ms ease; }
 .story-row:hover .story-actions, .story-actions:focus-within { opacity: 1; }
 .story-actions :deep(button) { border-radius: 0; }

@@ -191,8 +191,89 @@ test("unknown fields are tolerated so old clients survive newer servers", () => 
     stories: [{ ...story, needsResolution: true }],
     players,
     votes: {},
-    storyVotes: { "story-1": {} },
   }));
 
   assert.equal(snapshot?.type, "snapshot");
+});
+
+test("async per-story fields survive parsing intact", () => {
+  const snapshot = parseRoomRealtimeMessage(JSON.stringify({
+    type: "snapshot",
+    revision: 10,
+    room: { ...room, mode: "async" },
+    stories: [story],
+    players,
+    votes: {},
+    storyVotes: { "story-1": { "admin-1": "5", "user-1": HIDDEN_VOTE } },
+    voteProgress: { "story-1": { voted: 1, expected: 3, voterIds: ["admin-1"] } },
+  }));
+
+  assert.equal(snapshot?.type, "snapshot");
+  if (snapshot?.type !== "snapshot") return;
+  assert.deepEqual(snapshot.storyVotes, {
+    "story-1": { "admin-1": "5", "user-1": HIDDEN_VOTE },
+  });
+  assert.deepEqual(snapshot.voteProgress, {
+    "story-1": { voted: 1, expected: 3, voterIds: ["admin-1"] },
+  });
+
+  const votesFrame = parseRoomRealtimeMessage(JSON.stringify({
+    type: "votes",
+    storyId: "story-1",
+    votes: { "admin-1": HIDDEN_VOTE },
+    progress: { voted: 2, expected: 3, voterIds: ["admin-1", "user-1"] },
+  }));
+  assert.equal(votesFrame?.type, "votes");
+  if (votesFrame?.type === "votes") {
+    assert.deepEqual(votesFrame.progress, {
+      voted: 2,
+      expected: 3,
+      voterIds: ["admin-1", "user-1"],
+    });
+  }
+});
+
+test("malformed async fields are dropped without failing the frame", () => {
+  // Rejecting the whole snapshot here would freeze the room exactly like an
+  // unknown story status does, so the guards must degrade to undefined.
+  const cases: unknown[] = [
+    { storyVotes: { "story-1": { "admin-1": 5 } } },
+    { storyVotes: "nope" },
+    { voteProgress: { "story-1": { voted: 1.5, expected: 3, voterIds: [] } } },
+    { voteProgress: { "story-1": { voted: 1, expected: 3, voterIds: [7] } } },
+    { voteProgress: { "story-1": { voted: 1 } } },
+  ];
+
+  for (const extra of cases) {
+    const snapshot = parseRoomRealtimeMessage(JSON.stringify({
+      type: "snapshot",
+      revision: 11,
+      room,
+      stories: [story],
+      players,
+      votes: {},
+      ...extra as Record<string, unknown>,
+    }));
+
+    assert.equal(snapshot?.type, "snapshot", `expected a usable snapshot for ${JSON.stringify(extra)}`);
+    if (snapshot?.type !== "snapshot") continue;
+    if ("storyVotes" in (extra as Record<string, unknown>)) {
+      assert.equal(snapshot.storyVotes, undefined);
+    } else {
+      assert.equal(snapshot.voteProgress, undefined);
+    }
+  }
+
+  // A malformed progress field must not discard the votes themselves.
+  const votesFrame = parseRoomRealtimeMessage(JSON.stringify({
+    type: "votes",
+    storyId: "story-1",
+    votes: { "admin-1": "8" },
+    progress: { voted: "1", expected: 3, voterIds: [] },
+  }));
+  assert.equal(votesFrame?.type, "votes");
+  if (votesFrame?.type === "votes") {
+    assert.deepEqual(votesFrame.votes, { "admin-1": "8" });
+    assert.equal(votesFrame.progress, undefined);
+  }
 });

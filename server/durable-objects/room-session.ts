@@ -5,6 +5,7 @@ import type {
   ConnectedRoomUser,
   RoomRealtimeServerMessage,
   RoomRealtimeState,
+  StoryVoteProgress,
   VotesMap,
 } from "~/types/room";
 import {
@@ -16,7 +17,7 @@ import {
   votesForViewer,
 } from "~/utils/room-realtime";
 import { DEFAULT_CARD_VALUES, isCardDeckVote } from "~/utils/card-decks";
-import { consensusValue, summarizeVotes } from "~/utils/async-voting";
+import { consensusValue, summarizeVotes, voteProgress } from "~/utils/async-voting";
 
 interface Env {}
 

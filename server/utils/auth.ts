@@ -33,7 +33,7 @@ function isLocalDeployment(event: H3Event) {
   if (!configured) return false;
 
   try {
-    return isLocalOrigin(new URL(configured).origin);
+    return isLocalOrigin(configured);
   } catch {
     return false;
   }

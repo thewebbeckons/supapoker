@@ -11,6 +11,12 @@ function toIso(value: Date | string | number | null | undefined) {
   return new Date(value).toISOString();
 }
 
+/** Like `toIso`, but keeps "not set" distinct from "now" for nullable columns. */
+function toIsoOrNull(value: Date | string | number | null | undefined) {
+  if (value === null || value === undefined) return null;
+  return toIso(value);
+}
+
 export function mapRoom(row: typeof schema.rooms.$inferSelect): Room {
   let cardValues: string[] = [...DEFAULT_CARD_VALUES];
   try {
@@ -50,6 +56,9 @@ export function mapStory(row: typeof schema.stories.$inferSelect): Story {
     finalEstimateSource: row.finalEstimateSource,
     voteAverage: row.voteAverage,
     voteCount: row.voteCount,
+    votingOpenedAt: toIsoOrNull(row.votingOpenedAt),
+    votingDeadlineAt: toIsoOrNull(row.votingDeadlineAt),
+    needsResolution: row.needsResolution === true,
     createdAt: toIso(row.createdAt),
     updatedAt: toIso(row.updatedAt),
     created_at: toIso(row.createdAt),

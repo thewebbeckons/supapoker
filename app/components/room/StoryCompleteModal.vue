@@ -31,7 +31,15 @@ watch(isOpen, (open) => {
     if (open) selected.value = suggested.value
 }, { immediate: true })
 
+/**
+ * Omitting the estimate falls back to the numeric mean, which only exists for
+ * numeric decks. On a t-shirt or effort deck that fallback would store nothing
+ * at all, so a card must be picked.
+ */
+const canConfirm = computed(() => selected.value !== null || average.value !== null)
+
 function confirm() {
+    if (!canConfirm.value) return
     emit('confirm', selected.value ?? undefined)
     isOpen.value = false
 }
@@ -62,7 +70,7 @@ function confirm() {
                             class="estimate-card"
                             :class="{ selected: selected === card }"
                             :aria-pressed="selected === card"
-                            :aria-label="`Final estimate ${card}`"
+                            :aria-label="`Final estimate ${displayCardValue(card)}`"
                             @click="selected = card"
                         >
                             {{ displayCardValue(card) }}
@@ -93,7 +101,8 @@ function confirm() {
 
                 <div class="flex justify-end gap-2">
                     <UButton label="Cancel" color="neutral" variant="ghost" @click="isOpen = false" />
-                    <UButton label="Complete Story" color="success" icon="i-lucide-check-circle" @click="confirm" />
+                    <UButton label="Complete Story" color="success" icon="i-lucide-check-circle"
+                        :disabled="!canConfirm" @click="confirm" />
                 </div>
             </div>
         </template>
@@ -120,6 +129,14 @@ function confirm() {
 }
 
 .estimate-card:hover { border-color: rgba(96, 165, 250, 0.5); color: #fafafa; }
+
+/* The selected state is only a border colour, which is not a reliable focus
+   cue, so keyboard focus gets its own outline. */
+.estimate-card:focus-visible {
+    outline: 2px solid #60a5fa;
+    outline-offset: 2px;
+    color: #fafafa;
+}
 
 .estimate-card.selected {
     border-color: #60a5fa;
