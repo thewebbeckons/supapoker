@@ -14,6 +14,7 @@ const createRoomSchema = z.object({
   name: z.string().trim().min(1).max(120),
   description: z.string().max(500).nullable().optional(),
   displayName: z.string().trim().min(2).max(80).optional(),
+  mode: z.enum(["realtime", "async"]).default("realtime"),
   cardDeckId: z.enum(CARD_DECK_IDS).default(DEFAULT_CARD_DECK_ID),
   cardValues: z.array(z.string().trim().min(1).max(MAX_CARD_VALUE_LENGTH))
     .min(MIN_CARD_VALUES)
@@ -39,6 +40,17 @@ export default defineEventHandler(async (event) => {
   const anonymous = isAnonymousAppUser(user);
 
   if (anonymous) {
+    // Async rooms are long-lived by definition, but a guest's single room is
+    // deleted after 30 days of inactivity and they have no rooms list to find it
+    // again. Owning one would be a data-loss trap.
+    if (body.mode === "async") {
+      throw createError({
+        statusCode: 403,
+        message: "Create an account to open an async room.",
+        data: { code: "ACCOUNT_REQUIRED" },
+      });
+    }
+
     const existingRoomId = await getGuestOwnedRoomId(user.id);
     if (existingRoomId) {
       throw createError({
@@ -73,6 +85,7 @@ export default defineEventHandler(async (event) => {
           name: body.name,
           description: body.description?.trim() || null,
           adminUserId: user.id,
+          mode: body.mode,
           cardDeckId: body.cardDeckId,
           cardValues: JSON.stringify(cardValues),
           createdAt: now,
@@ -120,6 +133,7 @@ export default defineEventHandler(async (event) => {
         name: body.name,
         description: body.description?.trim() || null,
         adminUserId: user.id,
+        mode: body.mode,
         cardDeckId: body.cardDeckId,
         cardValues: JSON.stringify(cardValues),
         createdAt: now,

@@ -21,6 +21,24 @@ function isLocalOrigin(origin: string) {
   );
 }
 
+/**
+ * Whether this is a local deployment, decided from the *configured* site URL and
+ * never from the request origin. The origin follows the Host header, so keying
+ * anything security-sensitive off it would let a spoofed Host turn the
+ * protection off in production. An unset site URL counts as non-local, so a
+ * misconfigured deploy fails closed.
+ */
+function isLocalDeployment(event: H3Event) {
+  const configured = useRuntimeConfig(event).public.siteUrl;
+  if (!configured) return false;
+
+  try {
+    return isLocalOrigin(configured);
+  } catch {
+    return false;
+  }
+}
+
 function getSiteUrl(event: H3Event) {
   const config = useRuntimeConfig(event);
   const configured = config.public.siteUrl;
@@ -71,7 +89,13 @@ export function createAuth(event: H3Event) {
   // Locally the captcha is skipped unless a secret is set, so dev works without
   // Turnstile. Everywhere else it stays on: a missing secret then fails closed
   // on the gated endpoints only, leaving session lookups working.
-  const captchaEnabled = Boolean(turnstileSecretKey) || !import.meta.dev;
+  //
+  // `import.meta.dev` alone is not enough. `pnpm run dev` builds for production
+  // and runs the output under Wrangler, so it is false there and the captcha
+  // stayed on for every local run — which no local Turnstile test key can
+  // satisfy, because siteverify reports a hostname that never matches.
+  const isLocal = import.meta.dev || isLocalDeployment(event);
+  const captchaEnabled = Boolean(turnstileSecretKey) || !isLocal;
 
   if (!captchaEnabled) {
     useLogger(event).warn("TURNSTILE_SECRET_KEY is not set; auth captcha is disabled.", {

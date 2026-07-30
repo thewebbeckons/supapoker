@@ -6,6 +6,7 @@ import type {
   RoomRealtimeServerMessage,
   RoomSocketBootstrap,
   Story,
+  StoryVoteProgress,
   VotesMap,
 } from "~/types/room";
 export const HIDDEN_VOTE = "__voted__";
@@ -33,6 +34,9 @@ function isRoom(value: unknown): value is Room {
     && typeof value.name === "string"
     && (typeof value.description === "string" || value.description === null)
     && typeof value.adminUserId === "string"
+    // Optional on purpose: a required check here would blank the persisted state
+    // of every warm Durable Object and 500 every mutation that syncs one.
+    && (value.mode === undefined || value.mode === "realtime" || value.mode === "async")
     && typeof value.cardDeckId === "string"
     && CARD_DECK_IDS.has(value.cardDeckId)
     && Array.isArray(value.cardValues)
@@ -61,6 +65,24 @@ function isPlayer(value: unknown): value is Player {
 
 function isVotesMap(value: unknown): value is VotesMap {
   return isRecord(value) && Object.values(value).every(vote => typeof vote === "string");
+}
+
+function isStoryVotesRecord(value: unknown): value is Record<string, VotesMap> {
+  return isRecord(value) && Object.values(value).every(isVotesMap);
+}
+
+function isStoryVoteProgress(value: unknown): value is StoryVoteProgress {
+  if (!isRecord(value)) return false;
+  return typeof value.voted === "number"
+    && Number.isSafeInteger(value.voted)
+    && typeof value.expected === "number"
+    && Number.isSafeInteger(value.expected)
+    && Array.isArray(value.voterIds)
+    && value.voterIds.every(id => typeof id === "string");
+}
+
+function isProgressRecord(value: unknown): value is Record<string, StoryVoteProgress> {
+  return isRecord(value) && Object.values(value).every(isStoryVoteProgress);
 }
 
 export function isConnectedRoomUser(value: unknown): value is ConnectedRoomUser {
@@ -148,6 +170,11 @@ export function parseRoomRealtimeMessage(raw: string): RoomRealtimeServerMessage
       stories: value.stories,
       players: value.players,
       votes: value.votes,
+      // Dropped when malformed rather than failing the frame: rejecting the
+      // whole snapshot here would freeze the room exactly like an unknown story
+      // status does.
+      storyVotes: isStoryVotesRecord(value.storyVotes) ? value.storyVotes : undefined,
+      voteProgress: isProgressRecord(value.voteProgress) ? value.voteProgress : undefined,
     };
   }
 
@@ -158,7 +185,12 @@ export function parseRoomRealtimeMessage(raw: string): RoomRealtimeServerMessage
 
   if (value.type === "votes") {
     if (typeof value.storyId !== "string" || !isVotesMap(value.votes)) return null;
-    return { type: "votes", storyId: value.storyId, votes: value.votes };
+    return {
+      type: "votes",
+      storyId: value.storyId,
+      votes: value.votes,
+      progress: isStoryVoteProgress(value.progress) ? value.progress : undefined,
+    };
   }
 
   if (value.type === "poke") {

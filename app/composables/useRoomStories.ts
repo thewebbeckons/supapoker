@@ -58,6 +58,7 @@ export function useRoomStories(
     type: StoryActionType,
     storyId: string,
     optimisticStatus: StoryStatus,
+    extra: Record<string, unknown> = {},
   ) {
     if (pendingStoryAction.value) return;
 
@@ -72,7 +73,7 @@ export function useRoomStories(
     try {
       await $fetch(`/api/rooms/${toValue(roomId)}/actions`, {
         method: "POST",
-        body: { type, storyId },
+        body: { type, storyId, ...extra },
       });
       await refreshStories();
     } catch (error: any) {
@@ -104,9 +105,15 @@ export function useRoomStories(
     await runAction("stopVote", activeStory.value.id, "voted");
   }
 
-  async function completeStory() {
+  /** `finalEstimate` is a raw deck card; omitting it falls back to the mean. */
+  async function completeStory(finalEstimate?: string) {
     if (!activeStory.value || isStoryActionPending.value) return;
-    await runAction("completeStory", activeStory.value.id, "completed");
+    await runAction(
+      "completeStory",
+      activeStory.value.id,
+      "completed",
+      finalEstimate ? { finalEstimate } : {},
+    );
   }
 
   function updateStoryLocally(id: string, updates: Partial<Story>) {
